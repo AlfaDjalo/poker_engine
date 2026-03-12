@@ -2,7 +2,11 @@ from enum import Enum
 from .game_state import GameState
 from .player_state import PlayerState
 from showdown.showdown_resolver import ShowdownResolver
-from cards.deck import Deck
+from cards.deck import Deck, FULL_DECK_MASK
+from board.board_generator import BoardGenerator
+from board.board_enumerator import choose_k
+
+import random
 
 class Phase(Enum):
 
@@ -23,7 +27,10 @@ class PokerState:
         self.rules = rules                # <--- GameRules (showdown logic)
         self.scoring_engine = scoring_engine
         self.deck = Deck()
-
+        self.resolver = ShowdownResolver(scoring_engine, rules)
+        self.board_generator = BoardGenerator(
+            game_def.board_cards_per_street
+        )
         self.phase = Phase.WAITING
 
     # -----------------------------------------------------
@@ -109,12 +116,30 @@ class PokerState:
                     p.hand_mask |= 1 << card
 
     def _deal_next_board(self):
+        
         g = self.game
-        cards = self.game_def.board_cards_per_street[g.street_index]  # <--- use game_def
-        for _ in range(cards):
-            card = self.deck.draw_next()
-            g.board_mask |= 1 << card
+        
+        cards_to_deal = self.game_def.board_cards_per_street[g.street_index]  # <--- use game_def
+        
+        dead_mask = g.board_mask
+
+        for p in g.players:
+            dead_mask |= p.hand_mask
+
+        available = FULL_DECK_MASK & ~dead_mask
+
+        boards = list(choose_k(available, cards_to_deal))
+
+        new_cards = random.choice(boards)
+
+        g.board_mask |= new_cards
+
         g.street_index += 1
+
+        # for _ in range(cards):
+        #     card = self.deck.draw_next()
+        #     g.board_mask |= 1 << card
+        # g.street_index += 1
 
     # -----------------------------------------------------
     # Blinds
@@ -202,13 +227,13 @@ class PokerState:
 
     def _resolve_showdown(self):
 
-        resolver = ShowdownResolver(
-            self.scoring_engine,
-            self.rules
-        )
+        # resolver = ShowdownResolver(
+        #     self.scoring_engine,
+        #     self.rules
+        # )
 
-        resolver.resolve(self.game)
-
+        # resolver.resolve(self.game)
+        self.resolver.resolve(self.game)
 
     def _distribute_pot(self, pot, winners):
 

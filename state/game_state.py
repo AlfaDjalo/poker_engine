@@ -8,7 +8,7 @@ class GameState:
 
     __slots__ = (
         "players",
-        "deck_mask",
+        # "deck_mask",
         "board_mask",
         "pot",
         "dealer_position",
@@ -25,7 +25,7 @@ class GameState:
 
         self.players = players
 
-        self.deck_mask = FULL_DECK_MASK
+        # self.deck_mask = FULL_DECK_MASK
         self.board_mask = 0
 
         self.pot = 0
@@ -42,19 +42,19 @@ class GameState:
         self.last_aggressor = None
         self.raises_this_street = 0
 
-    # -----------------------------------------------------
-    # Card utilities
-    # -----------------------------------------------------
+    # # -----------------------------------------------------
+    # # Card utilities
+    # # -----------------------------------------------------
 
-    def draw_card(self):
+    # def draw_card(self):
 
-        available = self.deck_mask
-        lsb = available & -available
-        card = lsb.bit_length() - 1
+    #     available = self.deck_mask
+    #     lsb = available & -available
+    #     card = lsb.bit_length() - 1
 
-        self.deck_mask ^= lsb
+    #     self.deck_mask ^= lsb
 
-        return card
+    #     return card
 
     # -----------------------------------------------------
     # Turn management

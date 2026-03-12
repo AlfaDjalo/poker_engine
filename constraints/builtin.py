@@ -56,7 +56,7 @@ class ImplicationConstraint(Constraint):
 
     def is_satisfied(self, mask: NodeMask) -> bool:
         if (mask & self.antecedent) == self.antecedent:
-            return (mask & self.antecedent) == self.consequent
+            return (mask & self.consequent) == self.consequent
         return True
     
 
@@ -66,7 +66,7 @@ class MutualExclusionConstraint(Constraint):
     """
     __slots__ = ("relevant",)
 
-    def __init__(self, relevant: NodeMask, k: int):
+    def __init__(self, relevant: NodeMask):
         self.relevant = relevant
     
     def is_satisfied(self, mask: NodeMask) -> bool:

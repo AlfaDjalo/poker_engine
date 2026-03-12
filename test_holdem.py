@@ -15,6 +15,7 @@ from actions.action import Action
 from actions.action_type import ActionType
 from cards.card_utils import mask_to_card_string
 
+from poker_eval import ScoreType, ShowdownType
 
 def print_game_state(poker_state, title=""):
     """Pretty-print current game state."""
@@ -117,7 +118,10 @@ def main():
     scoring_engine = CppScoringEngine()
 
     # Create game rules
-    rules = GameRules()
+    rules = GameRules(
+        score_types = [ScoreType.HIGH],
+        showdown_type=ShowdownType.HOLDEM
+    )
 
     # Create poker state
     poker_state = PokerState(players, game_def, rules, scoring_engine)

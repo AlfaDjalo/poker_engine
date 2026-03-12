@@ -2,8 +2,9 @@ from poker_eval import ScoreType, ShowdownType
 
 class GameRules:
 
-    score_types = [ScoreType.HIGH]
-    showdown_type = ShowdownType.HOLDEM          # single value, not a list
+    def __init__(self, score_types, showdown_type):
+        self.score_types = score_types
+        self.showdown_type = showdown_type
 
     def qualifies(self, score_type, score):
         return score is not None
