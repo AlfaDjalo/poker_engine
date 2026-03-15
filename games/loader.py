@@ -1,0 +1,97 @@
+import yaml
+from pathlib import Path
+
+from rules.game_definition import GameDefinition
+from rules.game_rules import GameRules, PointDefinition
+
+from poker_eval import ScoreType, ShowdownType
+
+
+BASE_PATH = Path(__file__).parent
+
+def load_game(name):
+
+    path = BASE_PATH / f"{name}.yaml"
+
+    with open(path) as f:
+        data = yaml.safe_load(f)
+
+    # -----------------------------
+    # board layout
+    # -----------------------------
+
+    streets = data["board_layout"]["streets"]
+
+    board_cards_per_street = [len(s) for s in streets]
+
+    street_nodes = [s for s in streets]
+
+    node_count = data["board_layout"]["nodes"]
+    # -----------------------------
+    # points
+    # ----------------------------- 
+
+    points = []
+
+    score_types = set()
+
+    for p in data["points"]:
+
+        score_type = getattr(ScoreType, p["score_type"])
+
+        score_types.add(score_type)
+
+        points.append(
+
+            PointDefinition(
+                name=p["name"],
+                score_type=score_type,
+                node_sets=[tuple(ns) for ns in p["node_sets"]]
+            )
+        )   
+
+    score_types = list(score_types)
+
+    # -----------------------------
+    # showdown
+    # -----------------------------
+
+    showdown_type = getattr(ShowdownType, data["showdown"]["type"])
+
+    # -----------------------------
+    # betting
+    # -----------------------------
+
+    betting = data["betting"]
+
+    small_blind = betting.get("small_blind", 0)
+    big_blind = betting.get("big_blind", 0)
+    ante = betting.get("ante", 0)
+
+    # -----------------------------
+    # GameDefinition
+    # -----------------------------
+    #     
+    game_def = GameDefinition(
+        hole_cards=data["hole_cards"],
+        board_cards_per_street=board_cards_per_street,
+        street_nodes=street_nodes,
+        score_types=score_types,
+        node_count=node_count,
+        # low_qualifier=data.get("low_qualifier"),
+        small_blind=small_blind,
+        big_blind=big_blind,
+        ante=ante
+    )
+
+    # -----------------------------
+    # GameRules
+    # -----------------------------
+
+    rules = GameRules(
+        score_types=score_types,
+        showdown_type=showdown_type,
+        points=points
+    )
+
+    return game_def, rules

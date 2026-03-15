@@ -3,6 +3,8 @@ from typing import Iterable, List, Optional
 from constraints.engine import ConstraintEngine
 from constraints.types import NodeMask
 from cards.deck import FULL_DECK_MASK
+from .canonical_board_generator import generate_canonical_boards
+
 # from cards.suit_iso import unique_canonical_masks
 
 from .board_enumerator import choose_k
@@ -45,7 +47,10 @@ class BoardGenerator:
 
         total_cards = sum(self.board_cards_per_street)
 
-        for board in choose_k(available, total_cards):
+        boards = generate_canonical_boards(total_cards)
+
+        for board in boards:
+        # for board in choose_k(available, total_cards):
 
             if self.constraint_engine.validate(board):
                 yield board

@@ -4,7 +4,7 @@ from typing import Dict, List
 from poker_eval import ScoreType
 
 from .showdown_result import ShowdownResult
-from rules.game_rules import GameRules
+
 
 class ShowdownResolver:
     """
@@ -13,6 +13,7 @@ class ShowdownResolver:
     Supports:
     - side pots
     - multiple boards
+    - CAP node boards
     - multiple scoring types (Hi/Lo)
     - qualifiers
     - deterministic chip distribution
@@ -21,6 +22,7 @@ class ShowdownResolver:
     __slots__ = ("scoring_engine", "rules", "debug")
 
     def __init__(self, scoring_engine, rules, debug: bool = False):
+
         self.scoring_engine = scoring_engine
         self.rules = rules
         self.debug = debug
@@ -50,36 +52,40 @@ class ShowdownResolver:
             for i in active
         ]
 
-        boards = self._extract_boards(game_state)
+        # -----------------------------------------
+        # generate board masks per point
+        # -----------------------------------------
 
-        showdown_type = self.rules.showdown_type        # single value
+        points = self._generate_points(game_state)
 
         # -----------------------------------------
         # evaluate scores
         # -----------------------------------------
 
-        scores_by_type: Dict[ScoreType, List] = {}
+        scores_by_point = []
 
-        for score_type in self.rules.score_types:
+        for point in points:
 
             board_scores = []
 
-            for board_mask in boards:
+            for board_mask in point["boards"]:
 
-                # use the engine's public evaluate() method
                 scores = self.scoring_engine.evaluate(
                     player_masks,
                     board_mask,
-                    score_type,
-                    showdown_type
+                    point["score_type"],
+                    self.rules.showdown_type
                 )
 
                 board_scores.append(scores)
 
-            scores_by_type[score_type] = board_scores
+            scores_by_point.append({
+                "score_type": point["score_type"],
+                "boards": point["boards"],
+                "scores": board_scores
+            })
 
         payouts = defaultdict(int)
-
         winners_by_pot = []
 
         # -----------------------------------------
@@ -100,8 +106,7 @@ class ShowdownResolver:
                 pot_amount,
                 contenders,
                 active_index,
-                scores_by_type,
-                boards
+                scores_by_point
             )
 
             winners_by_pot.append(pot_winners)
@@ -120,15 +125,14 @@ class ShowdownResolver:
             self._debug_output(
                 game_state,
                 payouts,
-                scores_by_type,
-                boards
+                scores_by_point
             )
 
         return ShowdownResult(
             payouts=dict(payouts),
             winners_by_pot=winners_by_pot,
-            scores=scores_by_type,
-            boards=boards
+            scores=scores_by_point,
+            boards=[p["boards"] for p in points]
         )
 
     # -----------------------------------------------------
@@ -138,27 +142,26 @@ class ShowdownResolver:
         pot_amount,
         contenders,
         active_index,
-        scores_by_type,
-        boards
+        scores_by_point
     ):
 
         payouts = defaultdict(int)
 
-        num_types = len(self.rules.score_types)
-        num_boards = len(boards)
+        num_points = sum(len(p["boards"]) for p in scores_by_point)
 
-        split_unit = pot_amount // (num_types * num_boards)
-        remainder = pot_amount % (num_types * num_boards)
+        split_unit = pot_amount // num_points
+        remainder = pot_amount % num_points
 
-        for score_type in self.rules.score_types:
+        for point in scores_by_point:
 
-            board_scores = scores_by_type[score_type]
+            score_type = point["score_type"]
 
-            for scores in board_scores:
+            for scores in point["scores"]:
 
                 contender_scores = []
 
                 for p in contenders:
+
                     s = scores[active_index[p]]
 
                     if self.rules.qualifies(score_type, s):
@@ -186,19 +189,42 @@ class ShowdownResolver:
                 for i in range(extra):
                     payouts[winners[i]] += 1
 
-        for i in range(remainder):
-            payouts[contenders[i % len(contenders)]] += 1
+            for i in range(remainder):
+                payouts[contenders[i % len(contenders)]] += 1
 
-        return payouts
+            return payouts
+        
 
-    # -----------------------------------------------------
+    def _generate_points(self, game_state):
+        """
+        Converts rule point definitions into concrete board masks.
+        """
 
-    def _extract_boards(self, game_state):
+        node_cards = game_state.node_cards
 
-        if hasattr(game_state, "board_masks"):
-            return game_state.board_masks
+        points = []
 
-        return [game_state.board_mask]
+        for point in self.rules.points:
+
+            board_masks = []
+
+            for node_set in point.node_sets:
+
+                mask = 0
+
+                for n in node_set:
+                    card = node_cards[n]
+                    mask |= 1 << card
+
+                board_masks.append(mask)
+
+            points.append({
+                "name": point.name,
+                "score_type": point.score_type,
+                "boards": board_masks
+            })
+
+        return points
 
     # -----------------------------------------------------
 
@@ -206,29 +232,15 @@ class ShowdownResolver:
         self,
         game_state,
         payouts,
-        scores,
-        boards
+        scores_by_point
     ):
 
         print("=== SHOWDOWN ===")
 
-        print("Boards:")
+        print(f"\nPoint: {p['score_type']}")
 
-        for b in boards:
-            print(f"  {b:b}")
-
-        print("\nScores:")
-
-        for score_type, board_scores in scores.items():
-
-            print(score_type)
-
-            for b_index, s in enumerate(board_scores):
-
-                print(f" Board {b_index}")
-
-                for i, score in enumerate(s):
-                    print(f"  Player {i}: {score}")
+        for i, board in enumerate(p["boards"]):
+            print(f" Board {i}: {board:b}")
 
         print("\nPayouts")
 

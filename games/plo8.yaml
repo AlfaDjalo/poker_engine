@@ -1,0 +1,30 @@
+name: plo8
+
+hole_cards: 4
+
+board_layout:
+  nodes: 5
+  streets:
+    - [0, 1, 2]   # flop
+    - [3]         # turn
+    - [4]         # river
+
+  points:
+    - name: high
+    score_type: HIGH
+    node_sets:
+    - [0, 1, 2, 3, 4]
+
+    - name: low
+    score_type: LOW_A5
+    node_sets:
+    - [0, 1, 2, 3, 4]
+
+  betting:
+    type: pot_limit
+    small_blind: 1
+    big_blind: 2
+    ante: 0
+
+  showdown:
+    type: OMAHA

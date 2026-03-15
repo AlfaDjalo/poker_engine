@@ -1,0 +1,30 @@
+name: double_board_plo_bomb_pot
+
+hole_cards: 4
+
+board_layout:
+  nodes: 10
+  streets:
+    - [0, 1, 2, 5, 6, 7]    # flop
+    - [3, 8]                # turn
+    - [4, 9]                # river
+
+points:
+  - name: board1
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+  - name: board2
+    score_type: HIGH
+    node_sets:
+      - [5, 6, 7, 8, 9]
+
+betting:
+  type: pot_limit
+  small_blind: 1
+  big_blind: 2
+  ante: 5
+
+showdown:
+  type: OMAHA
