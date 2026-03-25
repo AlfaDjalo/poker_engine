@@ -146,25 +146,35 @@ class GameState:
 
         elif action.type in (ActionType.BET, ActionType.RAISE):
 
-            to_call = self.bet_to_call - player.current_bet
-            total = to_call + action.amount
+            previous_bet = self.bet_to_call
+            total = action.amount
 
-            player.stack -= total
-            player.current_bet += total
-            player.total_contribution += total
+            additional = total - player.current_bet
 
-            self.pot += total
+            player.stack -= additional
+            player.current_bet = total
+            player.total_contribution += additional
+
+            self.pot += additional
 
             if player.stack == 0:
                 player.is_all_in = True
 
-            self.min_raise = action.amount
-            self.bet_to_call = player.current_bet
+            self.bet_to_call = total
+            self.min_raise = total - previous_bet
 
             self.players_acted = 1
             self.last_aggressor = self.current_player
-            self.last_to_act = (self.current_player - 1) % len(self.players)
             self.raises_this_street += 1
+
+            active = [
+                i for i, p in enumerate(self.players)
+                if not p.has_folded and not p.is_all_in
+            ]
+
+            idx = active.index(self.current_player)
+            self.last_to_act = active[idx - 1]
+
 
     # -----------------------------------------------------
     # Betting round completion
@@ -180,7 +190,10 @@ class GameState:
         * have matched the current bet
         """
 
-        remaining = [p for p in self.players if not p.has_folded]
+        remaining = [
+            p for p in self.players
+            if not p.has_folded and not p.is_all_in
+        ]
 
         # active = [p for p in remaining if not p.is_all_in]
         # remaining = self.remaining_players()
@@ -188,20 +201,33 @@ class GameState:
         if len(remaining) <= 1:
             return True
 
-        if self.current_player == self.last_to_act and self.players_acted > 0:
+        if self.players_acted > 0 and self.current_player == self.last_to_act:
             return True
+        # if all(p.current_bet == self.bet_to_call for p in remaining):
+        #     if self.players_acted >= len(remaining):
+        #         return True
+            
         # for p in remaining:
         #     if not p.is_all_in and p.current_bet != self.bet_to_call:
         #         return False
+
+        # if self.current_player == self.last_to_act:
+        #     return True
             
         return False
-    
-        # if all(p.current_bet == self.bet_to_call or p.is_all_in for p in remaining):
-        # # if self.current_player == self.last_to_act:
-        #     return True
-        
-        # return False
 
+    def betting_round_complete_after_action(self, acting_player):
+
+        remaining = [p for p in self.players if not p.has_folded]
+
+        if len(remaining) <= 1:
+            return True
+        
+        for p in remaining:
+            if not p.is_all_in and p.current_bet != self.bet_to_call:
+                return False
+            
+        return acting_player == self.last_to_act
 
     def reset_betting_round(self):
 
@@ -215,8 +241,22 @@ class GameState:
         self.last_aggressor = None
         self.raises_this_street = 0
 
-        remaining = [i for i, p in enumerate(self.players) if not p.has_folded and not p.is_all_in]
-        self.last_to_act = remaining[-1] if remaining else None
+        active = [
+            i for i, p in enumerate(self.players)
+            if not p.has_folded and not p.is_all_in
+        ]
+
+        if not active:
+            self.last_to_act = None
+            return
+        
+        start = self.current_player
+        idx = active.index(start)
+
+        self.last_to_act = active[idx - 1]
+
+        # remaining = [i for i, p in enumerate(self.players) if not p.has_folded and not p.is_all_in]
+        # self.last_to_act = remaining[-1] if remaining else None
 
     # -----------------------------------------------------
     # Pot handling
@@ -254,3 +294,34 @@ class GameState:
             remaining_players.remove(i)
 
         return side_pots
+
+    def legal_actions(self):
+
+        p = self.players[self.current_player]
+
+        # folded or all-in can't act
+        if p.has_folded or p.is_all_in:
+            return []
+        
+        to_call = self.bet_to_call - p.current_bet
+
+        actions = [ActionType.FOLD]
+
+        if to_call > 0:
+            actions.append(ActionType.CALL)
+        else:
+            actions.append(ActionType.CHECK)
+
+        if p.stack > to_call:
+
+            if self.bet_to_call == 0:
+                actions.append(ActionType.BET)
+            else:
+                if p.stack > to_call:
+                    actions.append(ActionType.RAISE)
+
+        print("Actions (engine): ", actions)
+
+        return actions
+
+            

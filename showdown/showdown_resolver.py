@@ -31,6 +31,7 @@ class ShowdownResolver:
 
     def resolve(self, game_state) -> ShowdownResult:
 
+        # hand_ranks = {}
         side_pots = game_state.build_side_pots()
 
         # -----------------------------------------
@@ -132,7 +133,8 @@ class ShowdownResolver:
             payouts=dict(payouts),
             winners_by_pot=winners_by_pot,
             scores=scores_by_point,
-            boards=[p["boards"] for p in points]
+            boards=[p["boards"] for p in points],
+            # hand_ranks=hand_ranks
         )
 
     # -----------------------------------------------------
@@ -189,10 +191,10 @@ class ShowdownResolver:
                 for i in range(extra):
                     payouts[winners[i]] += 1
 
-            for i in range(remainder):
-                payouts[contenders[i % len(contenders)]] += 1
+        for i in range(remainder):
+            payouts[contenders[i % len(contenders)]] += 1
 
-            return payouts
+        return payouts
         
 
     def _generate_points(self, game_state):
@@ -237,10 +239,10 @@ class ShowdownResolver:
 
         print("=== SHOWDOWN ===")
 
-        print(f"\nPoint: {p['score_type']}")
+        # print(f"\nPoint: {p['score_type']}")
 
-        for i, board in enumerate(p["boards"]):
-            print(f" Board {i}: {board:b}")
+        # for i, board in enumerate(p["boards"]):
+            # print(f" Board {i}: {board:b}")
 
         print("\nPayouts")
 

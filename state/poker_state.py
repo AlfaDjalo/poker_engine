@@ -36,11 +36,8 @@ class PokerState:
 
         self.deck = Deck()
 
-        self.resolver = ShowdownResolver(scoring_engine, rules)
+        self.resolver = ShowdownResolver(scoring_engine, rules, debug=True)
 
-        # self.board_generator = BoardGenerator(
-        #     game_def.board_cards_per_street
-        # )
         self.phase = Phase.WAITING
 
     # -----------------------------------------------------
@@ -83,6 +80,9 @@ class PokerState:
 
     def step(self, action):
 
+        if self.phase in (Phase.HAND_COMPLETE, Phase.WAITING):
+            return
+
         g = self.game
 
         # ------------------------------------------------
@@ -98,9 +98,10 @@ class PokerState:
 
             self._deal_next_board()
 
+            g.current_player = self._first_to_act()
+
             g.reset_betting_round()
 
-            g.current_player = self._first_to_act()
 
             self.phase = Phase.BETTING
             return
@@ -315,13 +316,12 @@ class PokerState:
 
     def _resolve_showdown(self):
 
-        # resolver = ShowdownResolver(
-        #     self.scoring_engine,
-        #     self.rules
-        # )
+        print("SHOWDOWN")
+        print("board:", self.game.node_cards)
+        print("players:", [p.hand_mask for p in self.game.players])
 
-        # resolver.resolve(self.game)
-        self.resolver.resolve(self.game)
+        self.last_showdown = self.resolver.resolve(self.game)
+
 
     def _distribute_pot(self, pot, winners):
 

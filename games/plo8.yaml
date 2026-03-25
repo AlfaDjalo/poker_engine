@@ -9,22 +9,22 @@ board_layout:
     - [3]         # turn
     - [4]         # river
 
-  points:
-    - name: high
+points:
+  - name: high
     score_type: HIGH
     node_sets:
-    - [0, 1, 2, 3, 4]
+      - [0, 1, 2, 3, 4]
 
-    - name: low
+  - name: low
     score_type: LOW_A5
     node_sets:
-    - [0, 1, 2, 3, 4]
+      - [0, 1, 2, 3, 4]
 
-  betting:
-    type: pot_limit
-    small_blind: 1
-    big_blind: 2
-    ante: 0
+betting:
+  type: pot_limit
+  small_blind: 1
+  big_blind: 2
+  ante: 0
 
-  showdown:
-    type: OMAHA
+showdown:
+  type: OMAHA

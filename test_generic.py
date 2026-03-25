@@ -23,7 +23,8 @@ from display.board_display import format_cap_boards
 
 # GAME = "holdem"
 # GAME = "omaha"
-GAME = "double_board_plo_bomb_pot"
+GAME = "plo8"
+# GAME = "double_board_plo_bomb_pot"
 
 
 # ------------------------------------------------------------
@@ -31,7 +32,7 @@ GAME = "double_board_plo_bomb_pot"
 # ------------------------------------------------------------
 
 def street_name(index):
-    names = ["PREFLOP", "FLOP", "TURN", "RIVER"]
+    names = ["PREFLOP", "FLOP", "TURN", "RIVER", "OCEAN"]
     if index < len(names):
         return names[index]
     return f"STREET_{index}"
