@@ -85,6 +85,11 @@ class PokerState:
 
         g = self.game
 
+        # Commenting this out to let GameService control progression
+        # if self.phase == Phase.SHOWDOWN:
+        #     self.phase = Phase.HAND_COMPLETE
+        #     return
+
         # ------------------------------------------------
         # Deal board phase
         # ------------------------------------------------
@@ -93,7 +98,7 @@ class PokerState:
 
             if not self._more_streets():
                 self._resolve_showdown()
-                self.phase = Phase.HAND_COMPLETE
+                self.phase = Phase.SHOWDOWN
                 return
 
             self._deal_next_board()
@@ -126,7 +131,7 @@ class PokerState:
 
                 self._resolve_showdown()
 
-                self.phase = Phase.HAND_COMPLETE
+                self.phase = Phase.SHOWDOWN
                 return
 
         else:
@@ -300,11 +305,14 @@ class PokerState:
 
         g = self.game
 
-        for p in g.players:
+        for i, p in enumerate(g.players):
 
             if not p.has_folded:
 
                 p.stack += g.pot
+
+                self.last_showdown = None
+                self.last_winners = [i]
 
                 g.pot = 0
 
@@ -320,7 +328,18 @@ class PokerState:
         print("board:", self.game.node_cards)
         print("players:", [p.hand_mask for p in self.game.players])
 
-        self.last_showdown = self.resolver.resolve(self.game)
+        result = self.resolver.resolve(self.game)
+
+        self.last_showdown = result
+
+        self.last_winners = [
+            p for p, amt in result.payouts.items()
+            if amt > 0
+        ]
+
+        self.game.pot = 0
+
+        # self.last_showdown = self.resolver.resolve(self.game)
 
 
     def _distribute_pot(self, pot, winners):
