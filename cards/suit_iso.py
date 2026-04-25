@@ -45,7 +45,7 @@ def compute_suit_map(mask: int) -> Dict[int, int]:
             suit_map[s] = next_suit
             next_suit += 1
 
-        return suit_map
+    return suit_map
     
 
 # ---------------------------------------------------------

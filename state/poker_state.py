@@ -25,7 +25,14 @@ class Phase(Enum):
 
 class PokerState:
 
-    def __init__(self, players, game_def, rules, scoring_engine):
+    def __init__(
+            self, 
+            players, 
+            game_def, 
+            rules, 
+            scoring_engine,
+            callbacks=None
+    ):
 
         self.game = GameState(players)
 
@@ -39,6 +46,8 @@ class PokerState:
         self.resolver = ShowdownResolver(scoring_engine, rules, debug=True)
 
         self.phase = Phase.WAITING
+
+        self.callbacks = callbacks
 
     # -----------------------------------------------------
     # Hand lifecycle
@@ -68,6 +77,7 @@ class PokerState:
             p.is_all_in = False
             p.hand_mask = 0
 
+        self._post_antes()
         self._post_blinds()
 
         self._deal_hole_cards()
@@ -75,6 +85,9 @@ class PokerState:
         g.current_player = self._first_to_act_preflop()
         g.last_to_act = (g.current_player - 1) % len(g.players)
         self.phase = Phase.BETTING
+
+        if self.callbacks:
+            self.callbacks.on_hand_start(self)
 
     # -----------------------------------------------------
 
@@ -111,7 +124,11 @@ class PokerState:
             self.phase = Phase.BETTING
             return
 
+        player_index = g.current_player
         g.apply_action(action)
+
+        if self.callbacks and action is not None:
+            self.callbacks.on_action(self, action, player_index)
 
         if g.betting_round_complete():
 
@@ -255,6 +272,21 @@ class PokerState:
 
             player.is_all_in = True
 
+    def _post_antes(self):
+
+        g = self.game
+        amount = self.game_def.ante
+
+        for player in g.players:
+            ante = min(amount, player.stack)
+            player.stack -= ante
+            player.current_bet += ante
+            player.total_contribution += ante
+            g.pot += ante
+
+            if player.stack == 0:
+                player.is_all_in = True
+
     # -----------------------------------------------------
     # Turn order
     # -----------------------------------------------------
@@ -338,6 +370,9 @@ class PokerState:
         ]
 
         self.game.pot = 0
+
+        if self.callbacks:
+            self.callbacks.on_showdown(self, result)
 
         # self.last_showdown = self.resolver.resolve(self.game)
 

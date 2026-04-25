@@ -2,7 +2,8 @@
 #include <pybind11/stl.h>
 
 #include "../evaluator/score_types.hpp"
-// #include "evaluator.h"
+
+namespace py = pybind11;
 
 std::vector<std::vector<int>> evaluate_hands(
     const std::vector<uint64_t>& hole_masks,
@@ -11,9 +12,7 @@ std::vector<std::vector<int>> evaluate_hands(
     ShowdownType showdown_type
 );
 
-namespace py = pybind11;
-
-PYBIND11_MODULE(_poker_eval, m)
+PYBIND11_MODULE(poker_eval, m)
 {
     py::enum_<ScoreType>(m, "ScoreType")
         .value("HIGH", ScoreType::HIGH)
@@ -28,8 +27,5 @@ PYBIND11_MODULE(_poker_eval, m)
         .value("DRAW", ShowdownType::DRAW)
         .value("BADUGI", ShowdownType::BADUGI);
 
-    m.def(
-        "evaluate_hands",
-        &evaluate_hands
-    );
+    m.def("evaluate_hands", &evaluate_hands);
 }

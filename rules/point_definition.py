@@ -1,6 +1,6 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-from poker_eval import ScoreType
+from poker_eval import ScoreType, ShowdownType
 
 
 class PointDefinition:
@@ -15,18 +15,24 @@ class PointDefinition:
         "name",
         "score_type",
         "node_sets",
-        "board_masks"
+        "board_masks",
+        "showdown_type_override",
+        "scoop_from",
     )
 
     def __init__(
             self,
             name: str,
             score_type: ScoreType,
-            node_sets: List[Tuple[int, ...]]
+            node_sets: List[Tuple[int, ...]],
+            showdown_type_override: Optional[ShowdownType] = None,
+            scoop_from: Optional[str] = None
     ):
         self.name = name
         self.score_type = score_type
         self.node_sets = node_sets
+        self.showdown_type_override = showdown_type_override
+        self.scoop_from = scoop_from
     
         board_masks: List[int] = []
 

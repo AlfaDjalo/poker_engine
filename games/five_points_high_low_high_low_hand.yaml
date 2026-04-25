@@ -1,0 +1,50 @@
+name: five_points_high_low_high_low_hand
+layout_name: double_board
+payout_type: points
+
+hole_cards: 6
+
+board_layout:
+  nodes: 10
+  streets:
+    - [0, 1, 2, 5, 6, 7]    # flop
+    - [3, 8]                # turn
+    - [4, 9]                # river
+
+points:
+  - name: high_board1
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+  - name: low_board1
+    score_type: LOW_A5
+    scoop_from: high_board1
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+  - name: high_board2
+    score_type: HIGH
+    node_sets:
+      - [5, 6, 7, 8, 9]
+
+  - name: low_board2
+    score_type: LOW_A5
+    scoop_from: high_board2
+    node_sets:
+      - [5, 6, 7, 8, 9]
+
+  - name: hand
+    score_type: HIGH
+    node_sets: 
+      - []
+    showdown_type_override: DRAW
+
+betting:
+  type: pot_limit
+  small_blind: 1
+  big_blind: 2
+  ante: 0
+
+showdown:
+  type: OMAHA

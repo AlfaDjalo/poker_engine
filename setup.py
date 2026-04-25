@@ -15,7 +15,17 @@ def get_pybind_include():
 ext_modules = [
     Extension(
         'poker_eval',
-        ['cpp/bindings/poker_eval_bindings.cpp', 'cpp/evaluator/evaluator.cpp'],
+        [
+            'cpp/bindings/poker_eval_bindings.cpp',
+            'cpp/evaluator/evaluator.cpp',
+            'cpp/evaluator/evaluate_high.cpp',
+            'cpp/evaluator/evaluate_holdem.cpp',
+            'cpp/evaluator/evaluate_omaha.cpp',
+            'cpp/evaluator/evaluate_make5.cpp',
+            'cpp/evaluator/evaluate_draw.cpp',
+            'cpp/evaluator/stub_evaluators.cpp',
+            'cpp/evaluator/evaluate_low.cpp',
+        ],
         include_dirs=[get_pybind_include(), 'cpp/evaluator'],
         language='c++',
     ),

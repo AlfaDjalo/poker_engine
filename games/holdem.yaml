@@ -1,4 +1,6 @@
 name: holdem
+layout_name: single_board
+payout_type: points
 
 hole_cards: 2
 

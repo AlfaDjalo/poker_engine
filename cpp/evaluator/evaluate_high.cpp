@@ -10,7 +10,7 @@ static void mask_to_ranks(uint64_t mask, vector<int>& ranks)
     {
         if (mask & (1ULL << c))
         {
-            int rank = c / 4;
+            int rank = c % 13;
             ranks.push_back(rank);
         }
     }
