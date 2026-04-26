@@ -13,6 +13,7 @@ class ScoreResult:
     """
 
     score: Tuple[int, ...]
+    best_hand_mask: int = 0 # Not sure about this
 
     def __lt__(self, other: "ScoreResult") -> bool:
         return self.score < other.score

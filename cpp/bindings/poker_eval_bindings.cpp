@@ -5,7 +5,7 @@
 
 namespace py = pybind11;
 
-std::vector<std::vector<int>> evaluate_hands(
+std::vector<std::vector<int64_t>> evaluate_hands(
     const std::vector<uint64_t>& hole_masks,
     uint64_t board_mask,
     ScoreType score_type,

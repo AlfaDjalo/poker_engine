@@ -11,10 +11,10 @@ class CppScoringEngine:
 
     def evaluate(self, player_masks, board_mask, score_type, showdown_type):
 
-        player_masks, board_mask = canonicalize_state(
-            player_masks,
-            board_mask
-        )
+        # player_masks, board_mask = canonicalize_state(
+        #     player_masks,
+        #     board_mask
+        # )
 
         print("player_masks: ", player_masks)
         print("board_mask: ", board_mask)
@@ -30,7 +30,7 @@ class CppScoringEngine:
 
         print("raw_scores: ", raw_scores)
 
-        return [ScoreResult(tuple(s)) for s in raw_scores]
+        return [ScoreResult((s[0],), best_hand_mask=s[1] if len(s) > 1 else 0) for s in raw_scores]
 
     # backwards compatibility
     def evaluate_hands(self, *args, **kwargs):

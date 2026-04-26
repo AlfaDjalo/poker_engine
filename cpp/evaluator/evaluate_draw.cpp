@@ -2,15 +2,17 @@
 #include "comb_tables.hpp"
 #include "five_card_rank.hpp"
 
+#include <utility>
 #include <vector>
 
-int evaluate_draw_high(uint64_t hand_mask)
+std::pair<int, uint64_t> evaluate_draw_high(uint64_t hand_mask)
 {
     auto cards = mask_to_cards(hand_mask);
 
     auto combos = choose(cards.size(), 5);
 
     int best = -1;
+    uint64_t best_mask = 0;
 
     for (auto& c:combos)
     {
@@ -25,8 +27,8 @@ int evaluate_draw_high(uint64_t hand_mask)
 
         int s = rank_high_5(mask);
 
-        if (s > best) best = s;
+        if (s > best) { best = s; best_mask = mask; }
     }
 
-    return best;
+    return {best, best_mask};
 }

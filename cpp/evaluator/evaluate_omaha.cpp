@@ -2,9 +2,10 @@
 #include "comb_tables.hpp"
 #include "five_card_rank.hpp"
 
+#include <utility>
 #include <vector>
 
-int evaluate_omaha_high(
+std::pair<int, uint64_t> evaluate_omaha_high(
     uint64_t hole_mask,
     uint64_t board_mask
 )
@@ -16,6 +17,7 @@ int evaluate_omaha_high(
     auto board3 = choose(board.size(), 3);
 
     int best = -1;
+    uint64_t best_mask = 0;
 
     for (auto& h:hole2)
     {
@@ -31,12 +33,11 @@ int evaluate_omaha_high(
                 (1ULL<<board[b[2]]);
 
             uint64_t mask = hm | bm;
-
             int s = rank_high_5(mask);
 
-            if (s > best) best = s;
+            if (s > best) { best = s; best_mask = mask; }
         }
     }
 
-    return best;
+    return {best, best_mask};
 }

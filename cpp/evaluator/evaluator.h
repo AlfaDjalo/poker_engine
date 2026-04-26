@@ -11,7 +11,7 @@ enum class ScoreType {
     BADUGI = 4
 };
 
-std::vector<std::vector<int>> evaluate_hands(
+std::vector<std::vector<int64_t>> evaluate_hands(
     const std::vector<uint64_t>& player_masks,
     uint64_t board_mask,
     ScoreType score_type
