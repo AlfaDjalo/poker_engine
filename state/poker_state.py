@@ -3,6 +3,8 @@ import random
 
 from .game_state import GameState
 from .player_state import PlayerState
+from actions.action import Action
+from actions.action_type import ActionType
 
 from showdown.showdown_resolver import ShowdownResolver
 
@@ -60,7 +62,6 @@ class PokerState:
         g = self.game
 
         g.street_index = 0
-        # g.board_mask = 0
         g.pot = 0
 
         g.node_cards = [None] * self.game_def.node_count
@@ -77,10 +78,14 @@ class PokerState:
             p.is_all_in = False
             p.hand_mask = 0
 
+        stacks_before = [p.stack for p in g.players]
+
         self._post_antes()
         self._post_blinds()
 
         self._deal_hole_cards()
+        self._deal_next_board()
+        # self._deal_initial_board()
 
         g.current_player = self._first_to_act_preflop()
         g.last_to_act = (g.current_player - 1) % len(g.players)
@@ -88,6 +93,7 @@ class PokerState:
 
         if self.callbacks:
             self.callbacks.on_hand_start(self)
+            self._fire_forced_bet_callbacks(stacks_before)
 
     # -----------------------------------------------------
 
@@ -124,11 +130,14 @@ class PokerState:
             self.phase = Phase.BETTING
             return
 
+        pot_before = g.pot
+        stack_before = g.players[g.current_player].stack
+
         player_index = g.current_player
         g.apply_action(action)
 
         if self.callbacks and action is not None:
-            self.callbacks.on_action(self, action, player_index)
+            self.callbacks.on_action(self, action, player_index, pot_before, stack_before)
 
         if g.betting_round_complete():
 
@@ -173,42 +182,25 @@ class PokerState:
 
                     p.hand_mask |= 1 << card
 
-    def _deal_next_board(self):
-        
+    def _deal_initial_board(self):
+        """Deal street 0 nodes at hand start (e.g. bomb pot flop)."""
         g = self.game
-        
-        # nodes = self.game_def.board_cards_per_street[g.street_index]
-        nodes = self.game_def.street_nodes[g.street_index]
-
+        nodes = self.game_def.street_nodes[0]
         for node in nodes:
-
             card = self.deck.draw_next()
-
             g.node_cards[node] = card
 
+        g.street_index = 1
+
+
+
+    def _deal_next_board(self):
+        g = self.game
+        nodes = self.game_def.street_nodes[g.street_index]
+        for node in nodes:
+            card = self.deck.draw_next()
+            g.node_cards[node] = card
         g.street_index += 1
-
-        # cards_to_deal = self.game_def.board_cards_per_street[g.street_index]  # <--- use game_def
-        
-        # dead_mask = g.board_mask
-
-        # for p in g.players:
-        #     dead_mask |= p.hand_mask
-
-        # available = FULL_DECK_MASK & ~dead_mask
-
-        # boards = list(choose_k(available, cards_to_deal))
-
-        # new_cards = random.choice(boards)
-
-        # g.board_mask |= new_cards
-
-        # g.street_index += 1
-
-        # for _ in range(cards):
-        #     card = self.deck.draw_next()
-        #     g.board_mask |= 1 << card
-        # g.street_index += 1
 
 
     # -----------------------------------------------------
@@ -398,3 +390,44 @@ class PokerState:
     def _more_streets(self):
         # return self.game.street_index < len(self.game_def.board_cards_per_street)
         return self.game.street_index < len(self.game_def.street_nodes)
+    
+    def _fire_forced_bet_callbacks(self, stacks_before):
+        g = self.game
+        n = len(g.players)
+        pot_running = 0
+
+        # Antes (posted in player order)
+        if self.game_def.ante > 0:
+            for i, p in enumerate(g.players):
+                amount = min(self.game_def.ante, stacks_before[i])
+                if amount > 0:
+                    action = Action(type=ActionType.ANTE, amount=amount)
+                    self.callbacks.on_action(
+                        self, action, i,
+                        pot_before=pot_running,
+                        stack_before=stacks_before[i]
+                    )
+                    pot_running += amount
+
+        # Small blind
+        sb = (g.dealer_position) % n   # dealer_position already incremented
+        sb_amount = min(self.game_def.small_blind, stacks_before[sb])
+        if sb_amount > 0:
+            action = Action(type=ActionType.BLIND, amount=sb_amount)
+            self.callbacks.on_action(
+                self, action, sb,
+                pot_before=pot_running,
+                stack_before=stacks_before[sb]
+            )
+            pot_running += sb_amount
+
+        # Big blind
+        bb = (g.dealer_position + 1) % n
+        bb_amount = min(self.game_def.big_blind, stacks_before[bb])
+        if bb_amount > 0:
+            action = Action(type=ActionType.BLIND, amount=bb_amount)
+            self.callbacks.on_action(
+                self, action, bb,
+                pot_before=pot_running,
+                stack_before=stacks_before[bb]
+            )

@@ -8,6 +8,12 @@ from poker_eval import ScoreType, ShowdownType
 
 
 BASE_PATH = Path(__file__).parent
+DEFAULT_STREET_NAMES = ["pre-flop", "flop", "turn", "river"]
+
+def _default_street_names(index: int) -> str:
+    if index < len(DEFAULT_STREET_NAMES):
+        return DEFAULT_STREET_NAMES[index]
+    return f"street_{index}"
 
 def load_game(name):
 
@@ -20,12 +26,29 @@ def load_game(name):
     # board layout
     # -----------------------------
 
-    streets = data["board_layout"]["streets"]
+    raw_streets = data["board_layout"]["streets"]
 
-    board_cards_per_street = [len(s) for s in streets]
+    # Keys are street indices (highest = last/showdown street).
+    # Streets with no nodes are implicitly zero cards dealt.   
+    max_index = max(int(k) for k in raw_streets)
 
-    street_nodes = [s for s in streets]
+    street_nodes = []
+    street_names_raw = data["board_layout"].get("street_names", {})
 
+    street_nodes_list = []
+    street_names = []
+
+    for i in range(max_index + 1):
+        nodes = raw_streets.get(i, raw_streets.get(str(i), []))
+        street_nodes_list.append(list(nodes))
+        street_name = street_names_raw.get(i, raw_streets.get(str(i), _default_street_names(i)))
+        street_names.append(street_name)
+
+    street_nodes = street_nodes_list
+    board_cards_per_street = [len(s) for s in street_nodes]
+        
+    board_cards_per_street = [len(s) for s in street_nodes]
+    
     node_count = data["board_layout"]["nodes"]
     # -----------------------------
     # points
@@ -84,6 +107,7 @@ def load_game(name):
         hole_cards=data["hole_cards"],
         board_cards_per_street=board_cards_per_street,
         street_nodes=street_nodes,
+        street_names=street_names,
         score_types=score_types,
         node_count=node_count,
         # low_qualifier=data.get("low_qualifier"),
@@ -108,7 +132,4 @@ def load_game(name):
         no_qualify_action=data.get("no_qualify_action", "scoop"),
     )
 
-    # print("score_types: ", score_types)
-    # print("showdown_type: ", showdown_type)
-    # print("points: ", points)
     return game_def, rules

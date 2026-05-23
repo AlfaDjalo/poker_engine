@@ -7,3 +7,6 @@ class ActionType(Enum):
     
     BET = auto()
     RAISE = auto()
+
+    BLIND = auto()
+    ANTE = auto()

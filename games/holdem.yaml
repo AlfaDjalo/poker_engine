@@ -7,9 +7,15 @@ hole_cards: 2
 board_layout:
   nodes: 5
   streets:
-    - [0, 1, 2]   # flop
-    - [3]         # turn
-    - [4]         # river
+    0: []         # pre-flop
+    1: [0, 1, 2]   # flop
+    2: [3]         # turn
+    3: [4]         # river
+  street_names:
+    0: "pre-flop"
+    1: "flop"
+    2: "turn"
+    3: "river"
 
 points:
   - name: main
