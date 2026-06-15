@@ -28,8 +28,6 @@ points:
 
 betting:
   type: pot_limit
-  small_blind: 1
-  big_blind: 2
   ante: 5
 
 showdown:

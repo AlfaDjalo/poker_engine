@@ -7,9 +7,9 @@ hole_cards: 6
 board_layout:
   nodes: 9
   streets:
-    - [0, 3, 6, 7, 8]       # flop
-    - [2, 5]                # turn
-    - [1, 4]                # river
+    1: [0, 3, 6, 7, 8]  # flop
+    2: [2, 5]           # turn
+    3: [1, 4]           # river
 
 points:
   - name: board1
@@ -40,3 +40,5 @@ betting:
 
 showdown:
   type: OMAHA
+
+payout_type: points

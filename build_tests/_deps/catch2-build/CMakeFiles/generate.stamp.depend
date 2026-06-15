@@ -1,0 +1,7 @@
+# CMake generation dependency list for this directory.
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-src/CMake/CatchConfigOptions.cmake
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-src/CMakeLists.txt
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/venv/Lib/site-packages/cmake/data/share/cmake-4.3/Modules/CMakeDependentOption.cmake
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/venv/Lib/site-packages/cmake/data/share/cmake-4.3/Modules/CMakePackageConfigHelpers.cmake
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/venv/Lib/site-packages/cmake/data/share/cmake-4.3/Modules/GNUInstallDirs.cmake
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/venv/Lib/site-packages/cmake/data/share/cmake-4.3/Modules/WriteBasicConfigVersionFile.cmake

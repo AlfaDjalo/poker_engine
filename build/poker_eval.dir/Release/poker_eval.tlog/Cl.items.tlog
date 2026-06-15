@@ -1,0 +1,9 @@
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\bindings\poker_eval_bindings.cpp;C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\poker_eval.dir\Release\poker_eval_bindings.obj
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluator.cpp;C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\poker_eval.dir\Release\evaluator.obj
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_high.cpp;C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\poker_eval.dir\Release\evaluate_high.obj
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_holdem.cpp;C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\poker_eval.dir\Release\evaluate_holdem.obj
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_omaha.cpp;C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\poker_eval.dir\Release\evaluate_omaha.obj
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_make5.cpp;C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\poker_eval.dir\Release\evaluate_make5.obj
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_draw.cpp;C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\poker_eval.dir\Release\evaluate_draw.obj
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\stub_evaluators.cpp;C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\poker_eval.dir\Release\stub_evaluators.obj
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_low.cpp;C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\poker_eval.dir\Release\evaluate_low.obj

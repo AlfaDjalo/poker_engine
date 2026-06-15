@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\CMakeFiles\8c86202b6bf64b68ca5200d7e2937960\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{0F8D52A9-0163-392F-B637-EB59E5F4DAB0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

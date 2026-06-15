@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-src\src\test\app\nanobench.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{09A2DB1C-227D-3A4B-9070-4A521964F81C}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -157,9 +157,6 @@ class GameState:
 
             self.pot += additional
 
-            if player.stack == 0:
-                player.is_all_in = True
-
             self.bet_to_call = total
             self.min_raise = total - previous_bet
 
@@ -172,9 +169,14 @@ class GameState:
                 if not p.has_folded and not p.is_all_in
             ]
 
-            idx = active.index(self.current_player)
-            self.last_to_act = active[idx - 1]
+            if self.current_player in active:
+                idx = active.index(self.current_player)
+                self.last_to_act = active[idx - 1]
+            else:
+                self.last_to_act = active[-1] if active else None
 
+            if player.stack == 0:
+                player.is_all_in = True        
 
     # -----------------------------------------------------
     # Betting round completion

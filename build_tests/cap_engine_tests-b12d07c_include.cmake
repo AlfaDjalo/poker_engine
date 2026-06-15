@@ -1,0 +1,5 @@
+if(EXISTS "C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/cap_engine_tests-b12d07c_tests.cmake")
+  include("C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/cap_engine_tests-b12d07c_tests.cmake")
+else()
+  add_test(cap_engine_tests_NOT_BUILT-b12d07c cap_engine_tests_NOT_BUILT-b12d07c)
+endif()

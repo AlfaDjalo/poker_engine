@@ -13,6 +13,10 @@ std::pair<int, uint64_t> evaluate_holdem_high(
     auto hole = mask_to_cards(hole_mask);
     auto board = mask_to_cards(board_mask);
 
+    // Guard: HOLDEM requires at least 2 hole cards
+    if (hole.size() < 2)
+        return {0, 0};
+
     std::vector<int> all = hole;
     all.insert(all.end(), board.begin(), board.end());
 

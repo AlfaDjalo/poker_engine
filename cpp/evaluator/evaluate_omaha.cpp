@@ -13,8 +13,17 @@ std::pair<int, uint64_t> evaluate_omaha_high(
     auto hole = mask_to_cards(hole_mask);
     auto board = mask_to_cards(board_mask);
 
+    // Guard: OMAHA requires at least 2 hole cards and 3 board cards
+    if (hole.size() < 2 || board.size() < 3)
+        return {0, 0};
+    
     auto hole2 = choose(hole.size(), 2);
     auto board3 = choose(board.size(), 3);
+
+
+    // No valid 2+3 combo possible — return 0, not -1
+    if (hole2.empty() || board3.empty())
+        return {0, 0};
 
     int best = -1;
     uint64_t best_mask = 0;

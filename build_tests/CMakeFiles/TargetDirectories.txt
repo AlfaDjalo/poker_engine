@@ -1,0 +1,13 @@
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/CMakeFiles/cap_engine_tests.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/CMakeFiles/Experimental.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/CMakeFiles/Nightly.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/CMakeFiles/Continuous.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/CMakeFiles/NightlyMemoryCheck.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/CMakeFiles/RUN_TESTS.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/CMakeFiles/ALL_BUILD.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/CMakeFiles/ZERO_CHECK.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-build/CMakeFiles/RUN_TESTS.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-build/CMakeFiles/ALL_BUILD.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-build/src/CMakeFiles/Catch2.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-build/src/CMakeFiles/Catch2WithMain.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-build/src/CMakeFiles/RUN_TESTS.dir

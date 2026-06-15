@@ -13,7 +13,7 @@ def sample_hand(range_obj):
 
         cumulative += entry.weight
 
-        if cumulative += r:
+        if cumulative >= r:
             return entry.mask
         
     return None

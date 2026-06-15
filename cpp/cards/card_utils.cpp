@@ -68,7 +68,7 @@ namespace cards {
             '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'
         };
 
-        static const char suit[] = {'c', 'd', 'h', 's'};
+        static const char suits[] = {'c', 'd', 'h', 's'};
 
         for (int bit = 0; bit < 52; bit++)
         {

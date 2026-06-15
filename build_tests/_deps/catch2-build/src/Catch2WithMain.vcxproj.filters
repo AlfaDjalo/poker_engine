@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build_tests\_deps\catch2-src\src\catch2\internal\catch_main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build_tests\_deps\catch2-src\src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{40FFAD10-98C2-3134-9EF6-72F74036F9D7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

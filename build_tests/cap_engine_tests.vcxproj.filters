@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\tests\cpp\test_main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\tests\cpp\test_rank_high_5.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\tests\cpp\test_evaluate_holdem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\tests\cpp\test_evaluate_omaha.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\tests\cpp\test_evaluate_low_a5.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\tests\cpp\test_evaluate_low_27.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\tests\cpp\test_evaluate_draw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_high.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_holdem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_omaha.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_make5.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_draw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\evaluate_low.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\cpp\evaluator\stub_evaluators.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\tests\cpp\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{40FFAD10-98C2-3134-9EF6-72F74036F9D7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

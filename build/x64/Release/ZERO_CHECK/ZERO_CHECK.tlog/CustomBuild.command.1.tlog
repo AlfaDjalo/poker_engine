@@ -1,0 +1,10 @@
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\CMAKEFILES\8C86202B6BF64B68CA5200D7E2937960\GENERATE.STAMP.RULE
+setlocal
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -SC:/Users/David/Projects/crazy_asian_poker/poker_engine -BC:/Users/David/Projects/crazy_asian_poker/poker_engine/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/cap_poker_extensions.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

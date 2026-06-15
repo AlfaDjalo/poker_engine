@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\leak\CMakeFiles\4fca12435ce1de3c0c414b58e640100b\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{D0464EA5-0552-33E3-BF8E-B6CCE76575BD}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

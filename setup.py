@@ -29,6 +29,15 @@ ext_modules = [
         include_dirs=[get_pybind_include(), 'cpp/evaluator'],
         language='c++',
     ),
+    Extension(
+        'cap_equity',
+        sources=[
+            'cpp/equity/equity_bindings.cpp',
+            'cpp/equity/equity_calc.cpp',
+        ],
+        include_dirs=[get_pybind_include(), 'cpp/evaluator', 'cpp/equity'],
+        language='c++',
+    ),
 ]
 
 setup(

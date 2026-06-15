@@ -1,0 +1,3 @@
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-subbuild/CMakeFiles/catch2-populate.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-subbuild/CMakeFiles/ALL_BUILD.dir
+C:/Users/David/Projects/crazy_asian_poker/poker_engine/build_tests/_deps/catch2-subbuild/CMakeFiles/ZERO_CHECK.dir

@@ -167,6 +167,45 @@ class ShowdownResolver:
         return scores_by_point
 
     # --------------------------------------------------
+    # Best-of collapse: multiple node_sets → one score per player
+    # --------------------------------------------------
+
+    def _best_scores_for_point(self, point, contenders, active_index):
+        """
+        Collapse all node_sets in a point to a single best score per player.
+
+        For HIGH: higher ScoreResult wins.
+        For LOW:  lower ScoreResult wins (min), but 0 (no hand / no qualify)
+                  is never selected unless it is the only option.
+
+        Returns a list aligned to the full active-player list (same indexing
+        as a single board_scores list), with None for players not in contenders.
+        """
+        score_type = point["score_type"]
+        is_low = self.rules.is_low_type(score_type)
+        num_active = max(active_index.values()) + 1 if active_index else 0
+
+        # Initialise to None for every active-player slot
+        best = [None] * num_active
+
+        for board_scores in point["scores"]:
+            for p in contenders:
+                idx = active_index[p]
+                s = board_scores[idx]
+                if s is None or s.score[0] == 0:
+                    continue
+                if best[idx] is None:
+                    best[idx] = s
+                elif is_low:
+                    if s < best[idx]:
+                        best[idx] = s
+                else:
+                    if s > best[idx]:
+                        best[idx] = s
+
+        return best
+
+    # --------------------------------------------------
     # Split pot resolution
     # --------------------------------------------------
 
@@ -174,15 +213,14 @@ class ShowdownResolver:
             self, pot_amount, contenders, active_index, scores_by_point
     ):
         """
-        Each component (point x board) independently wins an equal share
-        of the pot.
+        Each point independently wins an equal share of the pot.
+        When a point has multiple node_sets the best score across those
+        boards is used per player (best-of, not independent components).
 
-        num_components = total number of (point, board) pairs.
-        Each component is worth pot_amount // num_components.
+        num_components = number of points (not point × board pairs).
         """
         payouts = defaultdict(int)
 
-        # Build a lookup of point results by name for scoop resolution
         point_results = {
             p["name"]: p for p in scores_by_point
         }
@@ -190,42 +228,37 @@ class ShowdownResolver:
             pd.name: pd for pd in self.rules.points
         }
 
-        # Count total independent components
-        num_components = sum(
-            len(p["scores"]) for p in scores_by_point
-        )
+        num_components = len(scores_by_point)
 
         if num_components == 0:
-            return payouts
+            return payouts, []
         
-        # Integer division - track remainder for correct chip distribution
         base_share = pot_amount // num_components
         remainder = pot_amount % num_components
-        component_index = 0
 
-        scoop_flags = [[False] * len(p["scores"]) for p in scores_by_point]
+        # scoop flags: one entry per point (not per board)
+        scoop_flags = [[False] for _ in scores_by_point]
 
         for point_idx, point in enumerate(scores_by_point):
             score_type = point["score_type"]
             point_def = point_defs.get(point["name"])
 
-            for board_idx, board_scores in enumerate(point["scores"]):
+            component_pot = base_share + (1 if point_idx < remainder else 0)
 
-                # Each component gets base_share, plus 1 chip from remainder
-                component_pot = base_share + (1 if component_index < remainder else 0)
-                component_index += 1
+            # Collapse node sets to best score per player
+            best_scores = self._best_scores_for_point(point, contenders, active_index)
 
-                winners  = self._winners_for_board(
-                    board_scores, contenders, active_index, score_type
+            winners  = self._winners_for_board(
+                best_scores, contenders, active_index, score_type
+            )
+
+            if not winners:
+                winners = self._handle_no_qualify(
+                    point_def, 0, contenders,
+                    active_index, point_results, score_type
                 )
-
-                if not winners:
-                    winners = self._handle_no_qualify(
-                        point_def, board_idx, contenders,
-                        active_index, point_results, score_type
-                    )
-                    if winners:
-                        scoop_flags[point_idx][board_idx] = True
+                if winners:
+                    scoop_flags[point_idx][0] = True
 
                 if winners:
                     self._distribute(component_pot, winners, payouts)
@@ -244,7 +277,6 @@ class ShowdownResolver:
         Player(s) with the most points win the entire pot.
         Ties in points -> chop.
         """
-        # Tally points per contender
         point_tally = defaultdict(int)
 
         point_results = {p["name"]: p for p in scores_by_point}
@@ -254,26 +286,25 @@ class ShowdownResolver:
             score_type = point["score_type"]
             point_def = point_defs.get(point["name"])
 
-            for board_idx, board_scores in enumerate(point["scores"]):
+            # Collapse node_sets to best score per player
+            best_scores = self._best_scores_for_point(point, contenders, active_index)
+            
+            winners = self._winners_for_board(
+                best_scores, contenders, active_index, score_type
+            )
 
-                winners = self._winners_for_board(
-                    board_scores, contenders, active_index, score_type
+            if not winners:
+                winners = self._handle_no_qualify(
+                    point_def, 0, contenders,
+                    active_index, point_results, score_type
                 )
 
-                if not winners:
-                    winners = self._handle_no_qualify(
-                        point_def, board_idx, contenders,
-                        active_index, point_results, score_type
-                    )
+            if not winners:
+                continue
 
-                if not winners:
-                    continue
-
-                # In a points game, a shared board distributes
-                # the points amongst the winners
-                share = 1 / len(winners)
-                for w in winners:
-                    point_tally[w] += share
+            share = 1 / len(winners)
+            for w in winners:
+                point_tally[w] += share
 
         self._last_point_tallies = dict(point_tally)
 
@@ -282,7 +313,6 @@ class ShowdownResolver:
         
         max_points = max(point_tally.values())
 
-        # Only include players who actually won at least one component (> 0 points)
         pot_winners = [
             p for p in contenders
             if point_tally.get(p, 0.0) >= max_points - 1e-9
@@ -542,6 +572,12 @@ class ShowdownResolver:
     ):
         """
         Convert raw score output into DB-ready structured points.
+
+        Each point produces exactly one PointResult regardless of how many
+        node_sets it contains. When there are multiple node_sets the best
+        score across them is used per player (best-of: highest for HIGH,
+        lowest non-zero for LOW). node_mask is the union of all boards in
+        the point so the frontend can identify all relevant cards.
         """
 
         structured = []
@@ -551,40 +587,49 @@ class ShowdownResolver:
             name = point["name"]
             score_type = point["score_type"]
             showdown_type = point["showdown_type"]
+            is_low = self.rules.is_low_type(score_type)
+
+            # Collapse node_sets: best score + originating board per player
+            best_score_for = {}
+            best_board_mask_for = {}
 
             for board_idx, board_scores in enumerate(point["scores"]):
-                
-                node_mask = point["boards"][board_idx]
-
-                winners = self._winners_for_board(
-                    board_scores,
-                    active,
-                    active_index,
-                    score_type
-                )
-
-                # rank players
-                scored_players = []
-
+                node_mask_b = point["boards"][board_idx]
                 for p in active:
-                    score = board_scores[active_index[p]]
-
-                    if score is None or not self.rules.qualifies(score_type, score):
+                    s = board_scores[active_index[p]]
+                    if s is None or s.score[0] == 0:
                         continue
+                    if not self.rules.qualifies(score_type, s):
+                        continue
+                    if p not in best_score_for:
+                        best_score_for[p] = s
+                        best_board_mask_for[p] = node_mask_b
+                    else:
+                        better = (s < best_score_for[p]) if is_low else (s > best_score_for[p])
+                        if better:
+                            best_score_for[p] = s
+                            best_board_mask_for[p] = node_mask_b
+                
+            if not best_score_for:
+                continue
 
-                    scored_players.append((p, score))
+            union_mask = 0
+            for m in point["boards"]:
+                union_mask |= m
 
-                if not scored_players:
-                    continue
+            num_active = max(active_index.values()) + 1
+            collapsed = [None] * num_active
+            for p, s in best_score_for.items():
+                collapsed[active_index[p]] = s
 
-                # -------------------------
-                # Sort players
-                # ------------------------- 
-                reverse = not self.rules.is_low_type(score_type)
-                scored_players.sort(
-                    key=lambda x: x[1].score[0],
-                    reverse=reverse
-                )
+                winners = self._winners_for_board(collapsed, active, active_index, score_type)
+
+                scored_players = [
+                    (p, best_score_for[p]) for p in active if p in best_score_for
+                ]
+
+                reverse = not is_low
+                scored_players.sort(key=lambda x: x[1].score[0], reverse=reverse)
 
                 results = []
                 current_rank = 1
@@ -595,12 +640,10 @@ class ShowdownResolver:
                         current_rank = i + 1
 
                     best_mask = getattr(score, "best_hand_mask", 0)
-
                     best_cards = self._mask_to_cards(best_mask)
-                    board_cards = self._mask_to_cards(node_mask)
-                    hole_cards = self._mask_to_cards(
-                        game_state.players[p].hand_mask
-                    )
+                    player_board_mask = best_board_mask_for.get(p, union_mask)
+                    board_cards = self._mask_to_cards(player_board_mask)
+                    hole_cards = self._mask_to_cards(game_state.players[p].hand_mask)
 
                     board_used = [c for c in best_cards if c in board_cards]
                     hole_used = [c for c in best_cards if c in hole_cards]
@@ -620,9 +663,6 @@ class ShowdownResolver:
                         )
                     )
 
-                # -------------------------
-                # Assign point shares
-                # -------------------------
                 if winners:
                     share = 1.0 / len(winners)
                     for r in results:
@@ -638,14 +678,13 @@ class ShowdownResolver:
                             else str(showdown_type)
                         ),
                         score_type=score_type.name,
-                        node_mask=node_mask,
+                        node_mask=union_mask,
                         results=results
                     )
                 )
 
         return structured
         
-
     def _category(self, score_result, score_type):
 
         if score_result is None:

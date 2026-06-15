@@ -32,7 +32,7 @@ std::vector<std::vector<int64_t>> evaluate_hands(
         
         if (score_type == ScoreType::HIGH)
         {
-            std::cout << "DEBUG: score_type=HIGH" << std::endl;
+            // std::cout << "DEBUG: score_type=HIGH" << std::endl;
             int score = 0;
             uint64_t best_mask = 0;
 
@@ -67,11 +67,11 @@ std::vector<std::vector<int64_t>> evaluate_hands(
         // ------------------------
         if (score_type == ScoreType::LOW_A5)
         {
-            std::cout << "DEBUG: Entering LOW_A5 evaluation for hole=" << hole << " board=" << board_mask << std::endl;
+            // std::cout << "DEBUG: Entering LOW_A5 evaluation for hole=" << hole << " board=" << board_mask << std::endl;
             uint64_t best_mask = 0;
             uint64_t score =
                 poker_eval::evaluate_low_a5(hole, board_mask, (int)showdown_type, best_mask);
-            std::cout << "DEBUG: LOW_A5 score=" << score << std::endl;
+            // std::cout << "DEBUG: LOW_A5 score=" << score << std::endl;
 
             results.push_back({ (int64_t)score, (int64_t)best_mask });
             continue;
@@ -82,7 +82,7 @@ std::vector<std::vector<int64_t>> evaluate_hands(
         // ------------------------
         if (score_type == ScoreType::LOW_27)
         {
-            std::cout << "DEBUG: score_type=LOW_27" << std::endl;
+            // std::cout << "DEBUG: score_type=LOW_27" << std::endl;
             uint64_t best_mask = 0;
             uint64_t score =
                 poker_eval::evaluate_low_27(hole, board_mask, (int)showdown_type, best_mask);

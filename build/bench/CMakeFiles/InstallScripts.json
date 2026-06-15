@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/cmake_install.cmake",
+		"C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

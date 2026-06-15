@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\a243df1858aa595b438b34724ba73531\nanobench-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\a243df1858aa595b438b34724ba73531\nanobench-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\a243df1858aa595b438b34724ba73531\nanobench-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\a243df1858aa595b438b34724ba73531\nanobench-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\a243df1858aa595b438b34724ba73531\nanobench-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\a243df1858aa595b438b34724ba73531\nanobench-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\a243df1858aa595b438b34724ba73531\nanobench-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\a243df1858aa595b438b34724ba73531\nanobench-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\a21d3c47caad2a284339dfa27b30f831\nanobench-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\2a3d91a579eb6575a5302b008bf97109\nanobench-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-subbuild\CMakeFiles\nanobench-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{86D2D1B3-2A20-3780-A5AC-FC5F90E873EA}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

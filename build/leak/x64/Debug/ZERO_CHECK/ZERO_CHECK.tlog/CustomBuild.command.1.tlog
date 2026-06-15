@@ -1,0 +1,10 @@
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\LEAK\CMAKEFILES\4FCA12435CE1DE3C0C414B58E640100B\GENERATE.STAMP.RULE
+setlocal
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -SC:/Users/David/Projects/crazy_asian_poker/poker_engine/tests/cpp/leak -BC:/Users/David/Projects/crazy_asian_poker/poker_engine/build/leak --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/leak/cap_leak.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

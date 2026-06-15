@@ -1,0 +1,150 @@
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\A243DF1858AA595B438B34724BA73531\NANOBENCH-POPULATE-MKDIR.RULE
+setlocal
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -Dcfgdir=/Debug -P C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/tmp/nanobench-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E touch C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/src/nanobench-populate-stamp/Debug/nanobench-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\A243DF1858AA595B438B34724BA73531\NANOBENCH-POPULATE-DOWNLOAD.RULE
+setlocal
+cd C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/tmp/nanobench-populate-gitclone.cmake
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E touch C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/src/nanobench-populate-stamp/Debug/nanobench-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\A243DF1858AA595B438B34724BA73531\NANOBENCH-POPULATE-UPDATE.RULE
+setlocal
+cd C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-src
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/tmp/nanobench-populate-gitupdate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\A243DF1858AA595B438B34724BA73531\NANOBENCH-POPULATE-PATCH.RULE
+setlocal
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E touch C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/src/nanobench-populate-stamp/Debug/nanobench-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\A243DF1858AA595B438B34724BA73531\NANOBENCH-POPULATE-CONFIGURE.RULE
+setlocal
+cd C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E touch C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/src/nanobench-populate-stamp/Debug/nanobench-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\A243DF1858AA595B438B34724BA73531\NANOBENCH-POPULATE-BUILD.RULE
+setlocal
+cd C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E touch C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/src/nanobench-populate-stamp/Debug/nanobench-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\A243DF1858AA595B438B34724BA73531\NANOBENCH-POPULATE-INSTALL.RULE
+setlocal
+cd C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E touch C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/src/nanobench-populate-stamp/Debug/nanobench-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\A243DF1858AA595B438B34724BA73531\NANOBENCH-POPULATE-TEST.RULE
+setlocal
+cd C:\Users\David\Projects\crazy_asian_poker\poker_engine\build\bench\_deps\nanobench-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E touch C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/src/nanobench-populate-stamp/Debug/nanobench-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\A21D3C47CAAD2A284339DFA27B30F831\NANOBENCH-POPULATE-COMPLETE.RULE
+setlocal
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E make_directory C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E touch C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/CMakeFiles/Debug/nanobench-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -E touch C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/nanobench-populate-prefix/src/nanobench-populate-stamp/Debug/nanobench-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKEFILES\2A3D91A579EB6575A5302B008BF97109\NANOBENCH-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\DAVID\PROJECTS\CRAZY_ASIAN_POKER\POKER_ENGINE\BUILD\BENCH\_DEPS\NANOBENCH-SUBBUILD\CMAKELISTS.TXT
+setlocal
+C:\Users\David\Projects\crazy_asian_poker\poker_engine\venv\Lib\site-packages\cmake\data\bin\cmake.exe -SC:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild -BC:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild --check-stamp-file C:/Users/David/Projects/crazy_asian_poker/poker_engine/build/bench/_deps/nanobench-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
