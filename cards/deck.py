@@ -35,3 +35,7 @@ class Deck:
     
     def remaining_mask(self) -> int:
         return self._mask
+    
+    def return_card(self, card_id: int):
+        """Return a card to the deck (used when reshuffling discard pile)."""
+        self._mask |= (1 << card_id)

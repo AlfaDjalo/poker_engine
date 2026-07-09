@@ -1,6 +1,6 @@
 from typing import Iterable, List
 from cards.deck import FULL_DECK_MASK
-from cards.mask import CardMask
+from cards.mask import CardMask, mask_to_card_ids
 from .player_state import PlayerState
 from actions.action_type import ActionType
 
@@ -20,31 +20,24 @@ class GameState:
         "last_aggressor",
         "raises_this_street",
         "last_to_act",
+        "discard_pile",
     )
 
     def __init__(self, players: List[PlayerState]):
 
         self.players = players
-
-        # CAP board representation
-        # index = node index
-        # value = card index or None
         self.node_cards: List[int | None] = []
-
         self.pot = 0
-
         self.dealer_position = 0
         self.current_player = 0
-
         self.street_index = 0
-
         self.bet_to_call = 0
         self.min_raise = 0
-
         self.players_acted = 0
         self.last_aggressor = None
         self.last_to_act = None
         self.raises_this_street = 0
+        self.discard_pile: List[int] = []
 
     # -----------------------------------------------------
     # Board helpers
@@ -54,30 +47,22 @@ class GameState:
         """
         Convert node indices into a CardMask.
         """ 
-
         mask = 0
-
         for n in nodes:
-
             card = self.node_cards[n]
-
             if card is not None:
                 mask |= 1 << card
-
         return mask
 
     def full_board_mask(self) -> CardMask:
         """
         Mask of all boards currently dealt.
         """
-
         mask = 0
-
         for card in self.node_cards:
 
             if card is not None:
                 mask |= 1 << card
-
         return mask
 
     # -----------------------------------------------------
@@ -85,27 +70,21 @@ class GameState:
     # -----------------------------------------------------    
 
     def advance_turn(self):
-
         n = len(self.players)
-
         for i in range(1, n + 1):
-
             idx = (self.current_player + i) % n
             p = self.players[idx]
-
             if not p.has_folded and not p.is_all_in:
                 self.current_player = idx
                 return
 
     def active_players(self):
-
         return [
             i for i, p in enumerate(self.players)
             if not p.has_folded and not p.is_all_in
         ]
 
     def remaining_players(self):
-
         return [
             i for i, p in enumerate(self.players)
             if not p.has_folded
@@ -120,6 +99,10 @@ class GameState:
         player = self.players[self.current_player]
 
         if action.type == ActionType.FOLD:
+
+            for card_id in mask_to_card_ids(player.hand_mask):
+                self.discard_pile.append(card_id)
+            player.hand_mask = 0
 
             player.has_folded = True
             self.players_acted += 1
@@ -156,6 +139,8 @@ class GameState:
             player.total_contribution += additional
 
             self.pot += additional
+            if player.stack == 0:
+                player.is_all_in = True        
 
             self.bet_to_call = total
             self.min_raise = total - previous_bet
@@ -169,14 +154,15 @@ class GameState:
                 if not p.has_folded and not p.is_all_in
             ]
 
+            # idx = active.index(self.current_player)
+            # self.last_to_act = active[idx - 1]
+
             if self.current_player in active:
                 idx = active.index(self.current_player)
                 self.last_to_act = active[idx - 1]
             else:
                 self.last_to_act = active[-1] if active else None
 
-            if player.stack == 0:
-                player.is_all_in = True        
 
     # -----------------------------------------------------
     # Betting round completion

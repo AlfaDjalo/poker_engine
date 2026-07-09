@@ -111,16 +111,8 @@ static std::vector<std::array<int, 5>> get_five_card_combos(
         return result;
     }
 
-    if (showdown_type == 2) {
-        // MAKE5: all board cards and enough board cards to make 5 card hand
-        return result;
-    }
-
-    if (showdown_type == 4) {
-        // BADUGI
-        return result;
-    }
-
+    // MAKE5, BADUGI, or unknown showdown type — not applicable for low evaluation
+    return result;
 }
 
 // --------------------------------------------------
@@ -160,7 +152,7 @@ uint64_t evaluate_low_27(uint64_t hole_mask, uint64_t board_mask, int showdown_t
 
     auto combos = get_five_card_combos(hole, board, showdown_type);
 
-    uint32_t best = 0;
+    int best = 0;   // rank_high_5 returns int; 0 = no result yet
     best_mask_out = 0;
 
     for (auto& cards : combos) {
@@ -168,12 +160,13 @@ uint64_t evaluate_low_27(uint64_t hole_mask, uint64_t board_mask, int showdown_t
         for (int c : cards) combo_mask |= (1ULL << c);
         int score = rank_high_5(combo_mask);
         if (score <= 0) continue;
-        if (best == 0 || (uint64_t)score < best) {
-            best = (uint64_t)score;
+        // Lower rank_high_5 score = better 2-7 low hand
+        if (best == 0 || score < best) {
+            best = score;
             best_mask_out = combo_mask;
         }
     }
-    return best;
+    return static_cast<uint64_t>(best);
 }
 
 }  // namespace poker_eval

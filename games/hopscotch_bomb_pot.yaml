@@ -28,3 +28,50 @@ betting:
 
 showdown:
   type: OMAHA
+
+creation_phases:
+  - id: SETUP
+    label: "Setup Players"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: false
+  - id: DEAL_HOLE
+    label: "Deal Hole Cards"
+    deals_hole: true
+    deals_board_street: null
+    allows_betting: false
+  - id: DEAL_FLOP
+    label: "Deal Flop"
+    deals_hole: false
+    deals_board_street: 0
+    allows_betting: false
+  - id: FLOP_BET
+    label: "Flop Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_TURN
+    label: "Deal Turn"
+    deals_hole: false
+    deals_board_street: 1
+    allows_betting: false
+  - id: TURN_BET
+    label: "Turn Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_RIVER
+    label: "Deal River"
+    deals_hole: false
+    deals_board_street: 2
+    allows_betting: false
+  - id: RIVER_BET
+    label: "River Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: SHOWDOWN
+    label: "Showdown"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: false

@@ -20,8 +20,16 @@ class Card:
     
     @staticmethod
     def from_str(s: str) -> "Card":
-        rank = s[0]
-        suit = s[1]
+        if not isinstance(s, str) or len(s) != 2:
+            raise ValueError(f"Invalid card string: {s!r} (expected 2 chars, e.g. 'Ah')")
+
+        rank = s[0].upper()
+        suit = s[1].lower()
+
+        if rank not in RANKS:
+            raise ValueError(f"Invalid card string: {s!r} (unknown rank {rank!r})")
+        if suit not in SUITS:
+            raise ValueError(f"Invalid card string: {s!r} (unknown suit {suit!r})")
 
         r = RANKS.index(rank)
         s_index = SUITS.index(suit)

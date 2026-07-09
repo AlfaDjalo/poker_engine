@@ -3,15 +3,13 @@ import random
 
 from .game_state import GameState
 from .player_state import PlayerState
-from actions.action import Action
-from actions.action_type import ActionType
+from .hand_snapshot import HandSnapshot, PlayerSnapshot
 
 from showdown.showdown_resolver import ShowdownResolver
 
-from cards.deck import Deck #, FULL_DECK_MASK
-from cards.mask import CardMask
+from cards.deck import Deck
+from cards.mask import CardMask, mask_to_card_ids
 
-# from board.board_generator import BoardGenerator
 from board.board_enumerator import choose_k
 
 
@@ -65,9 +63,9 @@ class PokerState:
         g.pot = 0
 
         g.node_cards = [None] * self.game_def.node_count
+        g.discard_pile = []
 
         self.deck.shuffle()
-
         g.dealer_position = (g.dealer_position + 1) % len(g.players)
 
         for p in g.players:
@@ -78,14 +76,11 @@ class PokerState:
             p.is_all_in = False
             p.hand_mask = 0
 
-        stacks_before = [p.stack for p in g.players]
-
         self._post_antes()
         self._post_blinds()
 
         self._deal_hole_cards()
         self._deal_next_board()
-        # self._deal_initial_board()
 
         g.current_player = self._first_to_act_preflop()
         g.last_to_act = (g.current_player - 1) % len(g.players)
@@ -93,8 +88,113 @@ class PokerState:
 
         if self.callbacks:
             self.callbacks.on_hand_start(self)
-            self._fire_forced_bet_callbacks(stacks_before)
 
+    
+    # -----------------------------------------------------
+    # Load State (Hand Editor)
+    # -----------------------------------------------------
+
+    @classmethod
+    def load_state(cls,
+        snapshot: HandSnapshot,
+        game_def,
+        rules,
+        scoring_engine,
+        callbacks=None
+        ) -> "PokerState":
+        """
+        Reconstruct a PokerState from a HandSnapshot.
+        Used by the hand editor to resume play from an arbitrary point.
+        Does NOT call start_hand() — state is already mid-hand.
+        """
+        players = [
+            PlayerState(
+                stack=ps.stack,
+                hand_mask=ps.hand_mask,
+                current_bet=ps.current_bet,
+                total_contribution=ps.total_contribution,
+                has_folded=ps.has_folded,
+                is_all_in=ps.is_all_in,
+                
+            )
+            for ps in snapshot.players
+        ]
+
+        instance = cls(players, game_def, rules, scoring_engine, callbacks)
+
+        g = instance.game
+
+        # Restore game state fields
+        g.street_index = snapshot.street_index
+        g.pot = snapshot.pot
+        g.dealer_position = snapshot.dealer_position
+        g.current_player = snapshot.current_player
+        g.bet_to_call = snapshot.bet_to_call
+        g.min_raise = snapshot.min_raise
+        g.raises_this_street = snapshot.raises_this_street
+        g.last_aggressor = snapshot.last_aggressor
+        g.node_cards = snapshot.node_cards
+        g.discard_pile = snapshot.discard_pile
+
+        if g.street_index < len(game_def.street_nodes):
+            current_street_nodes = game_def.street_nodes[g.street_index]
+            # If all nodes for this street have a card, the engine already dealt it!
+            if all(g.node_cards[n] is not None for n in current_street_nodes):
+                g.street_index += 1
+
+        # Recompute last_to_act from active player list
+        active = [
+            i for i, p in enumerate(g.players)
+            if not p.has_folded and not p.is_all_in
+        ]
+
+        if active and g.current_player not in active:
+            raise ValueError(
+                f"Invalid state: current_player {g.current_player} "
+                f"is not among the active players {active}."
+            )
+
+        if active:
+            start = g.current_player
+            if start in active:
+                idx = active.index(start)
+            else:
+                idx = 0
+            g.last_to_act = active[idx - 1]
+        else:
+            g.last_to_act = None
+
+        # Reconstruct deck: full deck minus in-play and discard
+        in_play = set(snapshot.discard_pile)
+        for card in snapshot.node_cards:
+            if card is not None:
+                in_play.add(card)
+        for ps in snapshot.players:
+            for card in mask_to_card_ids(ps.hand_mask):
+                in_play.add(card)
+
+        instance.deck.shuffle()
+        for card in in_play:
+            instance.deck.remove(card)
+
+        instance.phase = Phase.BETTING
+
+        return instance
+
+    # -----------------------------------------------------
+    # Draw game helpers
+    # -----------------------------------------------------
+
+    def _reshuffle_discard(self):
+        """Reshuffle discard pile back into deck (draw games)."""
+        for card in self.game.discard_pile:
+            self.deck.return_card(card)
+        self.game.discard_pile = []
+        self.deck.shuffle()
+
+    # -----------------------------------------------------
+    # step(), dealing, blinds, turn order, showdown
+    # (unchanged from original — reproduced for completeness)
     # -----------------------------------------------------
 
     def step(self, action):
@@ -391,6 +491,20 @@ class PokerState:
         # return self.game.street_index < len(self.game_def.board_cards_per_street)
         return self.game.street_index < len(self.game_def.street_nodes)
     
+    # def _more_streets(self) -> bool:
+    #     g = self.game
+    #     # Ensure we don't advance past the absolute maximum number of configured streets
+    #     if g.street_index >= len(self.game_def.street_nodes) - 1:
+    #         return False
+            
+    #     # Alternate safety: If all board cards for the entire game definition are already dealt, 
+    #     # there are physically no more streets to deal.
+    #     total_expected_board = sum(self.game_def.board_cards_per_street)
+    #     if len(g.board) >= total_expected_board:
+    #         return False
+
+    #     return True
+
     def _fire_forced_bet_callbacks(self, stacks_before):
         g = self.game
         n = len(g.players)

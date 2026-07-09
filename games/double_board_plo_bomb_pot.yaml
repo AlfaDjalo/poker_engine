@@ -32,3 +32,57 @@ betting:
 
 showdown:
   type: OMAHA
+
+# ─────────────────────────────────────────────
+# Creation phases — bomb pot: antes are posted automatically, both flops
+# are dealt simultaneously *before* the first betting round (there is no
+# pre-flop betting phase at all). deals_board_street references the
+# board_layout.streets key (0 = flop here, since this variant's streets
+# map starts at 0 for the flop, not pre-flop).
+# ─────────────────────────────────────────────
+creation_phases:
+  - id: SETUP
+    label: "Setup Players"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: false
+  - id: DEAL_HOLE
+    label: "Deal Hole Cards"
+    deals_hole: true
+    deals_board_street: null
+    allows_betting: false
+  - id: DEAL_FLOP
+    label: "Deal Both Flops"
+    deals_hole: false
+    deals_board_street: 0
+    allows_betting: false
+  - id: FLOP_BET
+    label: "Flop Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_TURN
+    label: "Deal Both Turns"
+    deals_hole: false
+    deals_board_street: 1
+    allows_betting: false
+  - id: TURN_BET
+    label: "Turn Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_RIVER
+    label: "Deal Both Rivers"
+    deals_hole: false
+    deals_board_street: 2
+    allows_betting: false
+  - id: RIVER_BET
+    label: "River Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: SHOWDOWN
+    label: "Showdown"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: false

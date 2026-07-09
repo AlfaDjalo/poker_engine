@@ -64,6 +64,17 @@ class ShowdownResolver:
 
         scores_by_point = self._evaluate_all_points(player_masks, game_state)
 
+        # OPTIMIZATION: Only build rich db/frontend models if debugging or explicitly required
+        # if self.debug:
+        #     structured_points = self._build_structured_points(
+        #         scores_by_point,
+        #         active,
+        #         active_index,
+        #         game_state
+        #     )
+        # else:
+        #     structured_points = []
+
         structured_points = self._build_structured_points(
             scores_by_point,
             active,
@@ -171,39 +182,67 @@ class ShowdownResolver:
     # --------------------------------------------------
 
     def _best_scores_for_point(self, point, contenders, active_index):
-        """
-        Collapse all node_sets in a point to a single best score per player.
+            score_type = point["score_type"]
+            is_low = self.rules.is_low_type(score_type)
+            num_active = max(active_index.values()) + 1 if active_index else 0
 
-        For HIGH: higher ScoreResult wins.
-        For LOW:  lower ScoreResult wins (min), but 0 (no hand / no qualify)
-                  is never selected unless it is the only option.
+            best = [None] * num_active
+            
+            # Pre-map contenders to their index positions to bypass dict hashing overhead inside the hot loop
+            contender_indices = [(p, active_index[p]) for p in contenders]
 
-        Returns a list aligned to the full active-player list (same indexing
-        as a single board_scores list), with None for players not in contenders.
-        """
-        score_type = point["score_type"]
-        is_low = self.rules.is_low_type(score_type)
-        num_active = max(active_index.values()) + 1 if active_index else 0
-
-        # Initialise to None for every active-player slot
-        best = [None] * num_active
-
-        for board_scores in point["scores"]:
-            for p in contenders:
-                idx = active_index[p]
-                s = board_scores[idx]
-                if s is None or s.score[0] == 0:
-                    continue
-                if best[idx] is None:
-                    best[idx] = s
-                elif is_low:
-                    if s < best[idx]:
+            for board_scores in point["scores"]:
+                for p, idx in contender_indices:
+                    s = board_scores[idx]
+                    if s is None or s.score[0] == 0:
+                        continue
+                    
+                    current_best = best[idx]
+                    if current_best is None:
                         best[idx] = s
-                else:
-                    if s > best[idx]:
-                        best[idx] = s
+                    elif is_low:
+                        if s < current_best:
+                            best[idx] = s
+                    else:
+                        if s > current_best:
+                            best[idx] = s
 
-        return best
+            return best
+
+    # def _best_scores_for_point(self, point, contenders, active_index):
+    #     """
+    #     Collapse all node_sets in a point to a single best score per player.
+
+    #     For HIGH: higher ScoreResult wins.
+    #     For LOW:  lower ScoreResult wins (min), but 0 (no hand / no qualify)
+    #               is never selected unless it is the only option.
+
+    #     Returns a list aligned to the full active-player list (same indexing
+    #     as a single board_scores list), with None for players not in contenders.
+    #     """
+    #     score_type = point["score_type"]
+    #     is_low = self.rules.is_low_type(score_type)
+    #     num_active = max(active_index.values()) + 1 if active_index else 0
+
+    #     # Initialise to None for every active-player slot
+    #     best = [None] * num_active
+
+    #     for board_scores in point["scores"]:
+    #         for p in contenders:
+    #             idx = active_index[p]
+    #             s = board_scores[idx]
+    #             if s is None or s.score[0] == 0:
+    #                 continue
+    #             if best[idx] is None:
+    #                 best[idx] = s
+    #             elif is_low:
+    #                 if s < best[idx]:
+    #                     best[idx] = s
+    #             else:
+    #                 if s > best[idx]:
+    #                     best[idx] = s
+
+    #     return best
 
     # --------------------------------------------------
     # Split pot resolution
@@ -260,8 +299,8 @@ class ShowdownResolver:
                 if winners:
                     scoop_flags[point_idx][0] = True
 
-                if winners:
-                    self._distribute(component_pot, winners, payouts)
+            if winners:
+                self._distribute(component_pot, winners, payouts)
 
         return dict(payouts), scoop_flags
 
@@ -399,62 +438,62 @@ class ShowdownResolver:
 
     # -----------------------------------------------------
 
-    def _resolve_pot(
-        self,
-        pot_amount,
-        contenders,
-        active_index,
-        scores_by_point
-    ):
+    # def _resolve_pot(
+    #     self,
+    #     pot_amount,
+    #     contenders,
+    #     active_index,
+    #     scores_by_point
+    # ):
 
-        payouts = defaultdict(int)
+    #     payouts = defaultdict(int)
 
-        num_points = sum(len(p["boards"]) for p in scores_by_point)
+    #     num_points = sum(len(p["boards"]) for p in scores_by_point)
 
-        split_unit = pot_amount // num_points
-        remainder = pot_amount % num_points
+    #     split_unit = pot_amount // num_points
+    #     remainder = pot_amount % num_points
 
-        for point in scores_by_point:
+    #     for point in scores_by_point:
 
-            score_type = point["score_type"]
+    #         score_type = point["score_type"]
 
-            for scores in point["scores"]:
+    #         for scores in point["scores"]:
 
-                contender_scores = []
+    #             contender_scores = []
 
-                for p in contenders:
+    #             for p in contenders:
 
-                    s = scores[active_index[p]]
+    #                 s = scores[active_index[p]]
 
-                    if self.rules.qualifies(score_type, s):
-                        contender_scores.append((p, s))
+    #                 if self.rules.qualifies(score_type, s):
+    #                     contender_scores.append((p, s))
 
-                if not contender_scores:
-                    continue
+    #             if not contender_scores:
+    #                 continue
 
-                best_score = self.rules.best_score(
-                    score_type,
-                    [s for _, s in contender_scores]
-                )
+    #             best_score = self.rules.best_score(
+    #                 score_type,
+    #                 [s for _, s in contender_scores]
+    #             )
 
-                winners = [
-                    p for p, s in contender_scores
-                    if s == best_score
-                ]
+    #             winners = [
+    #                 p for p, s in contender_scores
+    #                 if s == best_score
+    #             ]
 
-                share = split_unit // len(winners)
-                extra = split_unit % len(winners)
+    #             share = split_unit // len(winners)
+    #             extra = split_unit % len(winners)
 
-                for w in winners:
-                    payouts[w] += share
+    #             for w in winners:
+    #                 payouts[w] += share
 
-                for i in range(extra):
-                    payouts[winners[i]] += 1
+    #             for i in range(extra):
+    #                 payouts[winners[i]] += 1
 
-        for i in range(remainder):
-            payouts[contenders[i % len(contenders)]] += 1
+    #     for i in range(remainder):
+    #         payouts[contenders[i % len(contenders)]] += 1
 
-        return payouts
+    #     return payouts
         
 
     def _generate_points(self, game_state):
@@ -536,14 +575,14 @@ class ShowdownResolver:
         from poker_eval import ScoreType as ST
 
         if score_type == ST.HIGH:
-            if v >= 7_000_000: cat = "Straight Flush"
-            elif v >= 6_000_000: cat = "Quads"
-            elif v >= 5_000_000: cat = "Full House"
-            elif v >= 4_000_000: cat = "Flush"
-            elif v >= 3_000_000: cat = "Straight"
-            elif v >= 2_000_000: cat = "Three of a Kind"
-            elif v >= 1_000_000: cat = "Two Pair"
-            elif v >= 500_000: cat = "One Pair"
+            if v >= 8_000_000: cat = "Straight Flush"
+            elif v >= 7_000_000: cat = "Quads"
+            elif v >= 6_000_000: cat = "Full House"
+            elif v >= 5_000_000: cat = "Flush"
+            elif v >= 4_000_000: cat = "Straight"
+            elif v >= 3_000_000: cat = "Three of a Kind"
+            elif v >= 2_000_000: cat = "Two Pair"
+            elif v >= 1_000_000: cat = "One Pair"
             else: cat = "High Card"
             return f"{cat} [{v}]"
 
@@ -610,65 +649,12 @@ class ShowdownResolver:
                             best_score_for[p] = s
                             best_board_mask_for[p] = node_mask_b
                 
-            if not best_score_for:
-                continue
-
             union_mask = 0
             for m in point["boards"]:
                 union_mask |= m
 
-            num_active = max(active_index.values()) + 1
-            collapsed = [None] * num_active
-            for p, s in best_score_for.items():
-                collapsed[active_index[p]] = s
-
-                winners = self._winners_for_board(collapsed, active, active_index, score_type)
-
-                scored_players = [
-                    (p, best_score_for[p]) for p in active if p in best_score_for
-                ]
-
-                reverse = not is_low
-                scored_players.sort(key=lambda x: x[1].score[0], reverse=reverse)
-
-                results = []
-                current_rank = 1
-
-                for i, (p, score) in enumerate(scored_players):
-
-                    if i > 0 and score.score[0] != scored_players[i - 1][1].score[0]:
-                        current_rank = i + 1
-
-                    best_mask = getattr(score, "best_hand_mask", 0)
-                    best_cards = self._mask_to_cards(best_mask)
-                    player_board_mask = best_board_mask_for.get(p, union_mask)
-                    board_cards = self._mask_to_cards(player_board_mask)
-                    hole_cards = self._mask_to_cards(game_state.players[p].hand_mask)
-
-                    board_used = [c for c in best_cards if c in board_cards]
-                    hole_used = [c for c in best_cards if c in hole_cards]
-
-                    results.append(
-                        PlayerPointResult(
-                            player_index=p,
-                            rank=current_rank,
-                            best_hand_mask=best_mask,
-                            value=score.score[0],
-                            category=self._category(score, score_type),
-                            share=0.0,
-                            best_hand_cards=best_cards,
-                            hole_cards_used=hole_used,
-                            board_cards_used=board_used,
-                            is_winner=(p in winners),
-                        )
-                    )
-
-                if winners:
-                    share = 1.0 / len(winners)
-                    for r in results:
-                        if r.player_index in winners:
-                            r.share = share
-
+            if not best_score_for:
+                # No one qualified, but we still report the point details with an empty results list
                 structured.append(
                     PointResult(
                         name=name,
@@ -679,9 +665,83 @@ class ShowdownResolver:
                         ),
                         score_type=score_type.name,
                         node_mask=union_mask,
-                        results=results
+                        results=[]
                     )
                 )
+                continue
+
+            # if not best_score_for:
+            #     continue
+
+            # union_mask = 0
+            # for m in point["boards"]:
+            #     union_mask |= m
+
+            num_active = max(active_index.values()) + 1
+            collapsed = [None] * num_active
+            for p, s in best_score_for.items():
+                collapsed[active_index[p]] = s
+
+            winners = self._winners_for_board(collapsed, active, active_index, score_type)
+
+            scored_players = [
+                (p, best_score_for[p]) for p in active if p in best_score_for
+            ]
+
+            reverse = not is_low
+            scored_players.sort(key=lambda x: x[1].score[0], reverse=reverse)
+
+            results = []
+            current_rank = 1
+
+            for i, (p, score) in enumerate(scored_players):
+
+                if i > 0 and score.score[0] != scored_players[i - 1][1].score[0]:
+                    current_rank = i + 1
+
+                best_mask = getattr(score, "best_hand_mask", 0)
+                best_cards = self._mask_to_cards(best_mask)
+                player_board_mask = best_board_mask_for.get(p, union_mask)
+                board_cards = self._mask_to_cards(player_board_mask)
+                hole_cards = self._mask_to_cards(game_state.players[p].hand_mask)
+
+                board_used = [c for c in best_cards if c in board_cards]
+                hole_used = [c for c in best_cards if c in hole_cards]
+
+                results.append(
+                    PlayerPointResult(
+                        player_index=p,
+                        rank=current_rank,
+                        best_hand_mask=best_mask,
+                        value=score.score[0],
+                        category=self._category(score, score_type),
+                        share=0.0,
+                        best_hand_cards=best_cards,
+                        hole_cards_used=hole_used,
+                        board_cards_used=board_used,
+                        is_winner=(p in winners),
+                    )
+                )
+
+            if winners:
+                share = 1.0 / len(winners)
+                for r in results:
+                    if r.player_index in winners:
+                        r.share = share
+
+            structured.append(
+                PointResult(
+                    name=name,
+                    showdown_type=(
+                        showdown_type.name
+                        if hasattr(showdown_type, "name")
+                        else str(showdown_type)
+                    ),
+                    score_type=score_type.name,
+                    node_mask=union_mask,
+                    results=results
+                )
+            )
 
         return structured
         
@@ -709,14 +769,15 @@ class ShowdownResolver:
         return "OTHER"
 
     def _mask_to_cards(self, mask):
-        cards = []
-        while mask:
-            lsb = mask & -mask
-            cid = lsb.bit_length() - 1
-            cards.append(cid)
-            mask ^= lsb
+        return mask_to_card_ids(mask)
+        # cards = []
+        # while mask:
+        #     lsb = mask & -mask
+        #     cid = lsb.bit_length() - 1
+        #     cards.append(cid)
+        #     mask ^= lsb
         
-        return cards
+        # return cards
 
 def decode_hand_mask(mask, node_mask, player_mask):
     cards = mask_to_card_ids(mask)
