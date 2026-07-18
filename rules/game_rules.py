@@ -54,8 +54,8 @@ class GameRules:
                 # score.score[0] is the encoded low hand; extract highest rank (lowest 4 bits)
                 highest_rank = (score.score[0] >> 16) & 0xF
                 # highest_rank = score.score[0] & 0xF
-                print("score.score: ", bin(score.score[0]))
-                print("highest_rank: ", highest_rank)
+                # print("score.score: ", bin(score.score[0]))
+                # print("highest_rank: ", highest_rank)
                 return 0 < highest_rank <= self.low_qualifier
         return True
 

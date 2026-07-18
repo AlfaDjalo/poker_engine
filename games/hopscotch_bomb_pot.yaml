@@ -29,6 +29,7 @@ betting:
 showdown:
   type: OMAHA
 
+
 creation_phases:
   - id: SETUP
     label: "Setup Players"

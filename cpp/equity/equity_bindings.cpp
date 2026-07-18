@@ -23,19 +23,53 @@
 //               "score_type": int(poker_eval.ScoreType.HIGH),
 //               "showdown_type": int(poker_eval.ShowdownType.HOLDEM),
 //               "node_sets": [[0, 1, 2, 3, 4]],
+//               "is_low": False,             # optional, defaults to False
+//               "low_qualifier": -1,         # optional, defaults to -1 (none)
+//               "scoop_from": "",            # optional, defaults to ""
 //           }
 //       ],
 //       evaluator = poker_eval.evaluate_hands,   # the existing C++ evaluator
+//       payout_type = "points",              # "points" | "split_pot"
+//       no_qualify_action = "scoop",         # "scoop" | "eliminate"
+//       pot_size = 100.0,                    # optional; 0 => currency fields stay 0
 //       exact_threshold = 50000,
 //       mc_iterations = 20000,
 //   )
 //   # result is a dict:
 //   # {
-//   #   "equity": {seat: {point_name: float}},
+//   #   "players": {
+//   #     seat: {
+//   #       "overall_equity_fraction": float,
+//   #       "overall_equity_currency": float,
+//   #       "scoop_probability": float,
+//   #       "split_probability": float,
+//   #       "points": {
+//   #         point_name: {
+//   #           "win_share": float,
+//   #           "win_probability": float,
+//   #           "tie_probability": float,
+//   #           "equity_currency": float,
+//   #           "equity_percent": float,
+//   #         }, ...
+//   #       }
+//   #     }, ...
+//   #   },
 //   #   "method": "exact"|"monte_carlo",
 //   #   "iterations": int,
 //   #   "elapsed_ms": float,
 //   # }
+//
+// ── REDESIGN (rich equity reporting) ────────────────────────────────
+// The response shape changed from the old flat
+// {"equity": {seat: {point_name: float}}} to the structure above so the
+// frontend can render overall pot equity, scoop/split probability, and
+// a full per-point breakdown (win / tie probability + currency
+// contribution) in one call. equity_service.py is responsible for
+// building "points" dicts with "is_low" / "low_qualifier" / "scoop_from"
+// sourced from GameRules / PointDefinition, and for passing
+// "payout_type" / "no_qualify_action" from GameRules, and "pot_size"
+// from the live GameState pot.
+// ─────────────────────────────────────────────────────────────────
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -103,6 +137,9 @@ py::dict py_calculate_equity(
     const py::list&             py_board_nodes,
     const py::list&             py_points,
     py::object                  py_evaluator,
+    const std::string&          payout_type,
+    const std::string&          no_qualify_action,
+    double                      pot_size,
     int                         exact_threshold,
     int                         mc_iterations)
 {
@@ -112,6 +149,8 @@ py::dict py_calculate_equity(
     req.exact_threshold    = exact_threshold;
     req.mc_iterations      = mc_iterations;
     req.evaluator          = make_evaluator(py_evaluator);
+    req.payout_type        = payout_type;
+    req.no_qualify_action  = no_qualify_action;
 
     // ── Players ──────────────────────────────────────────────────
     for (auto item : py_players) {
@@ -145,6 +184,25 @@ py::dict py_calculate_equity(
         pd.name          = d["name"].cast<std::string>();
         pd.score_type    = d["score_type"].cast<int>();
         pd.showdown_type = d["showdown_type"].cast<int>();
+
+        // Optional — defaults to false (HIGH-style comparison) if the
+        // caller doesn't supply it. equity_service.py sets this from
+        // GameRules.is_low_type(point.score_type).
+        pd.is_low        = d.contains("is_low") && d["is_low"].cast<bool>();
+
+        // Optional — low-qualifier threshold (e.g. 8 for 8-or-better).
+        // -1 means "no qualifier". Used as a C++-side safety net in
+        // addition to the Python-side filtering already applied by
+        // equity_service.py's evaluator_wrapper.
+        pd.low_qualifier = d.contains("low_qualifier")
+                                ? d["low_qualifier"].cast<int>()
+                                : -1;
+
+        // Optional — paired high point name for low no-qualify "scoop".
+        pd.scoop_from = d.contains("scoop_from") && !d["scoop_from"].is_none()
+                            ? d["scoop_from"].cast<std::string>()
+                            : std::string();
+
         for (auto ns : d["node_sets"].cast<py::list>()) {
             std::vector<int> node_set;
             for (auto n : ns.cast<py::list>()) node_set.push_back(n.cast<int>());
@@ -157,23 +215,35 @@ py::dict py_calculate_equity(
     EquityResult result;
     {
         py::gil_scoped_release release;
-        result = calculate_equity(req);
+        result = calculate_equity(req, pot_size);
     }
 
     // ── Build Python response dict ────────────────────────────────
-    // equity: {seat: {point_name: float}}
-    py::dict equity_dict;
-    for (int pi = 0; pi < (int)req.players.size(); ++pi) {
-        py::dict point_dict;
-        for (int ci = 0; ci < (int)result.point_names.size(); ++ci) {
-            point_dict[py::str(result.point_names[ci])] =
-                py::float_(result.equity[pi][ci]);
+    py::dict players_dict;
+    for (const auto& pe : result.players) {
+        py::dict player_out;
+        player_out["overall_equity_fraction"] = py::float_(pe.overall_equity_fraction);
+        player_out["overall_equity_currency"] = py::float_(pe.overall_equity_currency);
+        player_out["scoop_probability"]       = py::float_(pe.scoop_probability);
+        player_out["split_probability"]       = py::float_(pe.split_probability);
+
+        py::dict points_out;
+        for (const auto& ps : pe.points) {
+            py::dict point_out;
+            point_out["win_share"]        = py::float_(ps.win_share);
+            point_out["win_probability"]  = py::float_(ps.win_probability);
+            point_out["tie_probability"]  = py::float_(ps.tie_probability);
+            point_out["equity_currency"]  = py::float_(ps.equity_currency);
+            point_out["equity_percent"]   = py::float_(ps.equity_percent);
+            points_out[py::str(ps.name)]  = point_out;
         }
-        equity_dict[py::int_(req.players[pi].seat)] = point_dict;
+        player_out["points"] = points_out;
+
+        players_dict[py::int_(pe.seat)] = player_out;
     }
 
     py::dict out;
-    out["equity"]      = equity_dict;
+    out["players"]     = players_dict;
     out["method"]      = py::str(result.method);
     out["iterations"]  = py::int_(result.iterations);
     out["elapsed_ms"]  = py::float_(result.elapsed_ms);
@@ -192,10 +262,13 @@ PYBIND11_MODULE(cap_equity, m) {
         py::arg("board_nodes"),
         py::arg("points"),
         py::arg("evaluator"),
-        py::arg("exact_threshold") = EXACT_THRESHOLD,
-        py::arg("mc_iterations")   = MC_ITERATIONS,
+        py::arg("payout_type")       = "points",
+        py::arg("no_qualify_action") = "scoop",
+        py::arg("pot_size")          = 0.0,
+        py::arg("exact_threshold")   = EXACT_THRESHOLD,
+        py::arg("mc_iterations")     = MC_ITERATIONS,
         R"pbdoc(
-Calculate equity for each player across all scoring points.
+Calculate rich per-player, per-point equity for a CAP poker variant.
 
 Parameters
 ----------
@@ -204,15 +277,35 @@ total_hole_cards  : int   — default hole cards per player
 players           : list  — [{"seat": int, "known_cards": [int...], "total_hole_cards": int}, ...]
 board_nodes       : list  — card ids indexed by node position; None/-1 for unknown
 points            : list  — [{"name": str, "score_type": int, "showdown_type": int,
-                               "node_sets": [[int...], ...]}, ...]
-evaluator         : callable — poker_eval.evaluate_hands(masks, board, score_type, showdown_type)
+                               "node_sets": [[int...], ...],
+                               "is_low": bool, "low_qualifier": int, "scoop_from": str}, ...]
+evaluator         : callable — poker_eval.evaluate_hands(masks, board, score_type, showdown_type).
+                    For low-type points this callable should already return 0 for hands
+                    that do not meet the point's qualifier — see equity_service.py's
+                    evaluator_wrapper. The C++ engine re-checks via low_qualifier as a
+                    safety net.
+payout_type       : str   — "points" | "split_pot", mirrors GameRules.payout_type
+no_qualify_action : str   — "scoop" | "eliminate", mirrors GameRules.no_qualify_action
+pot_size          : float — current pot in chips; 0 disables currency fields
 exact_threshold   : int   — use exact enumeration when combinations <= this
 mc_iterations     : int   — Monte Carlo sample count when above threshold
 
 Returns
 -------
 dict with keys:
-  "equity"     : {seat_int: {point_name: float}}
+  "players"    : {seat_int: {
+                    "overall_equity_fraction": float,
+                    "overall_equity_currency": float,
+                    "scoop_probability": float,
+                    "split_probability": float,
+                    "points": {point_name: {
+                        "win_share": float,
+                        "win_probability": float,
+                        "tie_probability": float,
+                        "equity_currency": float,
+                        "equity_percent": float,
+                    }, ...}
+                 }, ...}
   "method"     : "exact" | "monte_carlo"
   "iterations" : int
   "elapsed_ms" : float

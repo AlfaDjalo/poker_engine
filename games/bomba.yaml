@@ -1,0 +1,137 @@
+name: bomba
+layout_name: bomba
+payout_type: points
+
+hole_cards: 6
+
+board_layout:
+  nodes: 10
+  streets:
+    0: [0, 1, 2]      # pre-flop
+    1: [3, 4, 5]      # flop
+    2: [6, 7, 8]   # turn
+    3: [9, 10]
+  street_names:
+    0: "pre-flop"
+    1: "flop"
+    2: "turn"
+    3: "river"
+
+points:
+  - name: high
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 9]               # Board 1
+      - [0, 1, 10]
+      - [0, 2, 9]
+      - [0, 2, 10]
+      - [1, 2, 9]
+      - [1, 2, 10]
+      - [3, 4, 9]               # Board 2
+      - [3, 4, 10]
+      - [3, 5, 9]
+      - [3, 5, 10]
+      - [4, 5, 9]
+      - [4, 5, 10]
+      - [6, 7, 9]               # Board 3
+      - [6, 7, 10]
+      - [6, 8, 9]
+      - [6, 8, 10]
+      - [7, 8, 9]
+      - [7, 8, 10]
+
+  - name: low
+    score_type: LOW_A5
+    scoop_from: high_board1
+    node_sets:
+      - [0, 1, 9]               # Board 1
+      - [0, 1, 10]
+      - [0, 2, 9]
+      - [0, 2, 10]
+      - [1, 2, 9]
+      - [1, 2, 10]
+      - [3, 4, 9]               # Board 2
+      - [3, 4, 10]
+      - [3, 5, 9]
+      - [3, 5, 10]
+      - [4, 5, 9]
+      - [4, 5, 10]
+      - [6, 7, 9]               # Board 3
+      - [6, 7, 10]
+      - [6, 8, 9]
+      - [6, 8, 10]
+      - [7, 8, 9]
+      - [7, 8, 10]
+
+  - name: hand
+    score_type: HIGH
+    node_sets: 
+      - []
+    showdown_type_override: DRAW
+
+betting:
+  type: pot_limit
+  small_blind: 1
+  big_blind: 2
+  ante: 0
+
+showdown:
+  type: OMAHA
+
+
+creation_phases:
+  - id: SETUP
+    label: "Setup Players"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: false
+  - id: DEAL_HOLE
+    label: "Deal Hole Cards"
+    deals_hole: true
+    deals_board_street: null
+    allows_betting: false
+  - id: DEAL_PREFLOP
+    label: "Deal Preflop"
+    deals_hole: true
+    deals_board_street: 0
+    allows_betting: false  
+  - id: PREFLOP_BET
+    label: "Preflop Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_FLOP
+    label: "Deal Flop"
+    deals_hole: false
+    deals_board_street: 1
+    allows_betting: false
+  - id: FLOP_BET
+    label: "Flop Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_TURN
+    label: "Deal Turn"
+    deals_hole: false
+    deals_board_street: 2
+    allows_betting: false
+  - id: TURN_BET
+    label: "Turn Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_RIVER
+    label: "Deal River"
+    deals_hole: false
+    deals_board_street: 3
+    allows_betting: false
+  - id: RIVER_BET
+    label: "River Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: SHOWDOWN
+    label: "Showdown"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: false

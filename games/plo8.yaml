@@ -1,4 +1,6 @@
 name: plo8
+layout_name: single_board
+payout_type: split_pot
 
 hole_cards: 4
 
@@ -19,6 +21,7 @@ points:
     score_type: LOW_A5
     node_sets:
       - [0, 1, 2, 3, 4]
+    scoop_from: high
 
 betting:
   type: pot_limit
@@ -29,4 +32,74 @@ betting:
 showdown:
   type: OMAHA
 
-payout_type: split_pot
+
+# ─────────────────────────────────────────────
+# Creation phases — drives CreationFlow.jsx step gating.
+# Each phase declares what UI actions are legal while it is active.
+# The frontend reads this (via /game/variants/{name}/config) instead of
+# hardcoding a fixed phase list, since variants differ (e.g. bomb pots
+# have no pre-flop betting phase).
+#
+#   id            — unique phase id
+#   label         — display label
+#   deals_board   — node indices that must be filled before leaving this
+#                   phase (references board_layout.streets keys), or [] 
+#   deals_hole    — true if hole cards are dealt/editable in this phase
+#   allows_betting— true if PlayerActionPanel-style actions are legal
+#                   (only relevant for live/replayer editing; for hand
+#                   creation we just need to know whether bet/stack
+#                   edits are exposed)
+#   next_auto     — if true, controller auto-advances once validation
+#                   for this phase passes (no explicit "Next" click needed)
+# ─────────────────────────────────────────────
+creation_phases:
+  - id: SETUP
+    label: "Setup Players"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: false
+  - id: DEAL_HOLE
+    label: "Deal Hole Cards"
+    deals_hole: true
+    deals_board_street: null
+    allows_betting: false
+  - id: PREFLOP_BET
+    label: "Preflop Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_FLOP
+    label: "Deal Flop"
+    deals_hole: false
+    deals_board_street: 1
+    allows_betting: false
+  - id: FLOP_BET
+    label: "Flop Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_TURN
+    label: "Deal Turn"
+    deals_hole: false
+    deals_board_street: 2
+    allows_betting: false
+  - id: TURN_BET
+    label: "Turn Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: DEAL_RIVER
+    label: "Deal River"
+    deals_hole: false
+    deals_board_street: 3
+    allows_betting: false
+  - id: RIVER_BET
+    label: "River Betting"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: true
+  - id: SHOWDOWN
+    label: "Showdown"
+    deals_hole: false
+    deals_board_street: null
+    allows_betting: false

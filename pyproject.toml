@@ -6,5 +6,11 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "poker_engine"
+version = "0.1.0"
+description = "Crazy Asian Poker Engine"
+requires-python = ">=3.11"
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
