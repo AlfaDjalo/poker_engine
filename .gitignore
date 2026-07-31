@@ -1,3 +1,5 @@
 venv/
+venv311/
+build_tests/
 __pycache__/
 tests/

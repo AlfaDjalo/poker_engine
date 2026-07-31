@@ -1,0 +1,43 @@
+name: push_fold
+layout_name: single_board
+payout_type: points
+
+hole_cards: 2
+
+board_layout:
+  nodes: 5
+  streets:
+    0: []         # pre-flop
+    1: [0, 1, 2]   # flop
+    2: [3]         # turn
+    3: [4]         # river
+  street_names:
+    0: "pre-flop"
+    1: "flop"
+    2: "turn"
+    3: "river"
+
+points:
+  - name: main
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+# Blinds are in the same units PushFoldService uses to size stacks
+# (chips = bb_count * big_blind). Keep small_blind/big_blind at the
+# standard 1/2 ratio — actual effective stacks (100bb human, 5-25bb
+# agent) are set per-hand via PlayerState.stack, not via this file.
+betting:
+  type: push_fold
+  small_blind: 1
+  big_blind: 2
+  ante: 0
+
+showdown:
+  type: HOLDEM
+
+# No creation_phases: push-fold is played live via PushFoldService, not
+# through the Hand Creation wizard (CreationFlow.jsx) that reads this
+# block for other variants. game_service.get_variant_config() defaults
+# missing creation_phases to [] so this variant simply won't offer that
+# flow, which is correct — see app/services/push_fold_service.py.

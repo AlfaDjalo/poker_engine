@@ -1,16 +1,20 @@
 [build-system]
 requires = [
-    "setuptools>=61.0",
-    "wheel",
+    "scikit-build-core>=0.9",
     "pybind11>=2.10"
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "scikit_build_core.build"
+
 
 [project]
 name = "poker_engine"
 version = "0.1.0"
 description = "Crazy Asian Poker Engine"
 requires-python = ">=3.11"
+dependencies = [
+]
 
-[tool.pytest.ini_options]
-pythonpath = ["."]
+
+[tool.scikit-build]
+cmake.version = ">=3.18"
+wheel.packages = ["poker_engine"]

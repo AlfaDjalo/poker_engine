@@ -14,13 +14,13 @@ std::vector<std::vector<int64_t>> evaluate_hands(
 
 PYBIND11_MODULE(poker_eval, m)
 {
-    py::enum_<ScoreType>(m, "ScoreType")
+    py::enum_<ScoreType>(m, "ScoreType", py::module_local())
         .value("HIGH", ScoreType::HIGH)
         .value("LOW_A5", ScoreType::LOW_A5)
         .value("LOW_27", ScoreType::LOW_27)
         .value("BADUGI", ScoreType::BADUGI);
 
-    py::enum_<ShowdownType>(m, "ShowdownType")
+    py::enum_<ShowdownType>(m, "ShowdownType", py::module_local())
         .value("HOLDEM", ShowdownType::HOLDEM)
         .value("OMAHA", ShowdownType::OMAHA)
         .value("MAKE5", ShowdownType::MAKE5)

@@ -1,5 +1,5 @@
-from cards.mask import card_to_mask
-from ranges.range_builder import build_holdem_range
+from poker_engine.cards.mask import card_to_mask
+from poker_engine.ranges.range_builder import build_holdem_range
 
 board = (
     card_to_mask(12) |

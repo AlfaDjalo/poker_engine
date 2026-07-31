@@ -1,5 +1,5 @@
-from constraints.types import bit
-from constraints.generator import generate_k_submasks
+from poker_engine.constraints.types import bit
+from poker_engine.constraints.generator import generate_k_submasks
 
 hole_mask = bit(0) | bit(1)
 board_mask = bit(2) | bit(3) | bit(4) | bit(5) | bit(6)

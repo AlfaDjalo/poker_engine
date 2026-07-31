@@ -1,4 +1,4 @@
-from cards.card import Card
+from poker_engine.cards.card import Card
 
 
 def format_cap_boards(node_cards, row_length=5):

@@ -6,18 +6,18 @@ Simulates a full hand from blinds through showdown.
 
 import random
 
-from state.player_state import PlayerState
-from state.poker_state import PokerState, Phase
+from poker_engine.state.player_state import PlayerState
+from poker_engine.state.poker_state import PokerState, Phase
 
-from scoring.scoring_engine import CppScoringEngine
+from poker_engine.scoring.scoring_engine import CppScoringEngine
 
-from actions.action_type import ActionType
+from poker_engine.actions.action_type import ActionType
 
-from cards.card_utils import mask_to_card_string
+from poker_engine.cards.card_utils import mask_to_card_string
 
-from games.loader import load_game
+from poker_engine.games.loader import load_game
 
-from betting.betting_rules import NoLimitRules, PotLimitRules
+from poker_engine.betting.betting_rules import NoLimitRules, PotLimitRules
 
 from display.board_display import format_cap_boards
 

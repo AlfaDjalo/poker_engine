@@ -1,6 +1,6 @@
-from constraints.types import bit
-from constraints.engine import ConstraintEngine
-from constraints.builtin import ExactlyKConstraint
+from poker_engine.constraints.types import bit
+from poker_engine.constraints.engine import ConstraintEngine
+from poker_engine.constraints.builtin import ExactlyKConstraint
 
 A = bit(0)
 B = bit(1)
