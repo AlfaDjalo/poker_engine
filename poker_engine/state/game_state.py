@@ -147,6 +147,15 @@ class GameState:
             if self.betting_type == "push_fold":
                 total = player.current_bet + player.stack
 
+            # River-only: the only ever legal BET is a pot-sized bet
+            # (matching the RL Lab's river_duo.yaml tree, which only
+            # ever offers BET_100). legal_actions() below only offers
+            # BET when to_call == 0, so player.current_bet is always 0
+            # here — total is just the pot-sized amount, capped at the
+            # player's stack (an effective all-in if stack < pot).
+            elif self.betting_type == "river_only":
+                total = min(self.pot, player.current_bet + player.stack)
+
             additional = total - player.current_bet
 
             player.stack -= additional
@@ -198,11 +207,17 @@ class GameState:
             if not p.has_folded and not p.is_all_in
         ]
 
-        # active = [p for p in remaining if not p.is_all_in]
-        # remaining = self.remaining_players()
-
-        if len(remaining) <= 1:
+        if not remaining:
             return True
+
+        if len(remaining) == 1:
+            # The single player who still has chips behind still needs to
+            # act if their current bet hasn't matched bet_to_call yet (e.g.
+            # an opponent just shoved all-in and this player hasn't
+            # responded). Only treat the round as complete once they've
+            # actually matched — otherwise their call/fold decision would
+            # be skipped entirely.
+            return remaining[0].current_bet == self.bet_to_call
 
         if self.players_acted > 0 and self.current_player == self.last_to_act:
             return True
@@ -320,6 +335,26 @@ class GameState:
                 actions.append(ActionType.CALL)
                 if p.stack > to_call:
                     actions.append(ActionType.RAISE)
+            else:
+                actions.append(ActionType.CHECK)
+                if p.stack > 0:
+                    actions.append(ActionType.BET)
+
+            return actions
+
+        # ------------------------------------------------
+        # River-only: single pot-sized bet, no re-raises. FOLD is
+        # always offered; CHECK/BET when nothing is owed, CALL only
+        # (never a re-raise) when facing the one bet this street can
+        # ever have. Mirrors push_fold's shape exactly, sized to the
+        # pot instead of the stack — see river.yaml / river_only clamp
+        # in apply_action() above.
+        # ------------------------------------------------
+        if self.betting_type == "river_only":
+            actions = [ActionType.FOLD]
+
+            if to_call > 0:
+                actions.append(ActionType.CALL)
             else:
                 actions.append(ActionType.CHECK)
                 if p.stack > 0:

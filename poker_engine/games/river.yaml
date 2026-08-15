@@ -1,0 +1,51 @@
+name: river
+layout_name: single_board
+payout_type: points
+
+hole_cards: 2
+
+# Both hole cards and the FULL 5-card board are dealt as part of the
+# single declared street, BEFORE the one betting round starts — see
+# PokerState.start_hand()'s _deal_next_board() / _more_streets(). Only
+# one entry here (not two) is deliberate: _more_streets() compares
+# street_index against len(street_nodes), so a SECOND entry (even an
+# empty one) makes the engine demand a phantom second betting round
+# with no new cards after the river action completes. One entry means
+# street_index goes 0 -> 1 at deal time, and the single betting round
+# that follows takes it straight to showdown once complete.
+board_layout:
+  nodes: 5
+  streets:
+    0: [0, 1, 2, 3, 4]
+  street_names:
+    0: "river"
+
+points:
+  - name: main
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+# river_only betting: CHECK/BET(pot) on the first action, CALL/FOLD
+# facing a bet — no re-raises, no arbitrary sizing. Mirrors
+# push_fold's betting.type convention: this string selects a branch in
+# GameState.legal_actions()/apply_action() (see game_state.py) rather
+# than instantiating a BettingRules subclass at engine-setup time.
+# small_blind/big_blind are kept at the standard 1/2 ratio purely so
+# min_raise / bet-size math has a sane unit; they are NOT posted as
+# blinds for this variant — TrainerService undoes any posted blinds
+# immediately after start_hand() and replaces them with a randomized
+# dead pot (see trainer_service.py's river setup), since the "pot"
+# here represents chips from streets this engine variant doesn't model,
+# not a sum of live blinds.
+betting:
+  type: river_only
+  small_blind: 1
+  big_blind: 2
+  ante: 0
+
+showdown:
+  type: HOLDEM
+
+# No creation_phases — like push_fold, river is played live via
+# TrainerService, not through the Hand Creation wizard.
