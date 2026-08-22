@@ -1,0 +1,44 @@
+name: triple_board_3point_river
+layout_name: triple_board
+payout_type: points
+
+# Omaha-style board points only (no Hand Point in this variant — see
+# CAP_Game_Guide.docx's "High/high/high (3 points)"), so 4 hole cards
+# is enough, same as double_board_plo.yaml.
+hole_cards: 4
+
+board_layout:
+  nodes: 15
+  streets:
+    0: [0, 1, 2, 5, 6, 7, 10, 11, 12, 3, 8, 13, 4, 9, 14]                               # river (all three boards)
+  street_names:
+    0: "river"
+
+# 3 points, one per board — highest point count takes the whole pot
+# (chop on ties), per the Guide's "High/high/high (3 points)". Each
+# point is independent (own node_set), not a single best-of-3 point —
+# see double_board_plo.yaml's own note on why multiple node_sets under
+# ONE point would be wrong here (that collapses to a best-of, which is
+# the "hopscotch_bomb_pot" shared-node pattern, not this one).
+points:
+  - name: board_1
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+  - name: board_2
+    score_type: HIGH
+    node_sets:
+      - [5, 6, 7, 8, 9]
+  - name: board_3
+    score_type: HIGH
+    node_sets:
+      - [10, 11, 12, 13, 14]
+
+betting:
+  type: pot_limit
+  small_blind: 1
+  big_blind: 2
+  ante: 0
+
+showdown:
+  type: OMAHA

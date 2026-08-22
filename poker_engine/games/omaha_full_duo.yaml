@@ -1,0 +1,43 @@
+name: holdem_full_duo
+layout_name: single_board
+payout_type: points
+
+hole_cards: 2
+
+board_layout:
+  nodes: 5
+  streets:
+    0: []          # pre-flop
+    1: [0, 1, 2]   # flop
+    2: [3]         # turn
+    3: [4]         # river
+  street_names:
+    0: "pre-flop"
+    1: "flop"
+    2: "turn"
+    3: "river"
+
+points:
+  - name: main
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+# single_bet: exactly one voluntary bet/raise allowed PER STREET, then
+# call/fold only for the rest of that street — across all 4 streets,
+# not just one (see game_state.py's new "single_bet" legal_actions()
+# branch, which keys off raises_this_street rather than to_call so
+# preflop's blind-created gap doesn't get mistaken for "someone already
+# bet"). Real blinds are posted (pot: mode: blinds equivalent — i.e.
+# normal start_hand() behavior, unlike river_duo's dead-money pot).
+betting:
+  type: single_bet
+  small_blind: 1
+  big_blind: 2
+  ante: 0
+
+showdown:
+  type: HOLDEM
+
+# No creation_phases — played live via TrainerService, not through the
+# Hand Creation wizard (same as river.yaml).

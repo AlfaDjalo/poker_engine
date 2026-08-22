@@ -1,0 +1,62 @@
+name: double_board_high_high_hand_river
+layout_name: double_board
+payout_type: points
+
+# 5 hole cards (not double_board_plo.yaml's 4): the two board points
+# still only ever use exactly 2 of them (Omaha rule — see showdown
+# override below), but the third "Hand Point" needs a genuine 5-card
+# hand made entirely from hole cards, per CAP_Game_Guide.docx's own
+# definition ("Hand points: made using the players hold cards. These
+# are usually... five card hands"). 4 hole cards cannot produce a
+# standalone 5-card hand-only point, hence the extra hole card versus
+# double_board_plo.yaml.
+hole_cards: 5
+
+board_layout:
+  nodes: 10
+  streets:
+    0: [0, 1, 2, 5, 6, 7, 3, 8, 4, 9]                       # river (both boards)
+  street_names:
+    0: "river"
+
+# 3 points: high on board 1, high on board 2, best 5-card Hand Point
+# (hole cards only). payout_type: points — highest point count takes
+# the whole pot (chop on ties), per CAP_Game_Guide.docx's "High/high/
+# hand (3 points)" description, NOT split_pot (that's the "best high/
+# best low" double-board variant instead — see double_board_plo.yaml's
+# own note on why split_pot vs points matters here).
+points:
+  - name: board_1
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+    # Board points use the real Engine's default OMAHA showdown
+    # (declared below) — exactly 2 of the 5 hole cards + exactly 3 of
+    # this board's 5 dealt cards.
+  - name: board_2
+    score_type: HIGH
+    node_sets:
+      - [5, 6, 7, 8, 9]
+  - name: hand
+    score_type: HIGH
+    # No board cards feed the Hand Point — node_sets: [[]] gives an
+    # empty (all-zero) board_mask for this point (see loader.py:
+    # PointDefinition.generate_board_masks skips None/absent node
+    # cards, and an empty node_set produces mask=0 the same way).
+    # showdown_type_override: HOLDEM makes this point's evaluation use
+    # ALL of the player's hole cards against a zero board — i.e. a
+    # plain best-5-of-5 evaluation of the hole cards alone, since
+    # HOLDEM showdown places no fixed split between hole/board cards
+    # (contrast with the OMAHA-forced board points above).
+    node_sets:
+      - []
+    showdown_type_override: HOLDEM
+
+betting:
+  type: pot_limit
+  small_blind: 1
+  big_blind: 2
+  ante: 0
+
+showdown:
+  type: OMAHA

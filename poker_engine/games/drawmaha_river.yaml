@@ -1,0 +1,39 @@
+name: drawmaha_river
+layout_name: single_board
+payout_type: points
+
+hole_cards: 5
+
+# Same single-entry-street trick as river.yaml: hole cards + the full
+# 5-card board are dealt together as the one declared street, before
+# the single river_only betting round starts. See river.yaml's own
+# comment for exactly why a second (even empty) streets entry would
+# demand a phantom second betting round.
+board_layout:
+  nodes: 5
+  streets:
+    0: [0, 1, 2, 3, 4]
+  street_names:
+    0: "river"
+
+points:
+  - name: main
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+# river_only betting: CHECK/BET(pot) on the first action, CALL/FOLD
+# facing a bet — identical shape to river.yaml, just with an Omaha
+# showdown constraint (exactly 2 of 4 hole cards + exactly 3 of 5
+# board cards) enforced below rather than Hold'em's "any split".
+betting:
+  type: river_only
+  small_blind: 1
+  big_blind: 2
+  ante: 0
+
+showdown:
+  type: OMAHA
+
+# No creation_phases — played live via TrainerService, not through the
+# Hand Creation wizard, same as river.yaml.

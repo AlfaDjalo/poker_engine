@@ -7,6 +7,9 @@ hole_cards: 4
 board_layout:
   nodes: 5
   streets:
+    0: []
+
+    
     1: [0, 1, 2]   # flop
     2: [3]         # turn
     3: [4]         # river

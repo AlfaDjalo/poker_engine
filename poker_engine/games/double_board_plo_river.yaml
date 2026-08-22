@@ -1,75 +1,56 @@
 name: double_board_plo_river
-description: >
-  Heads-up river-only Double Board Pot-Limit Omaha with a single
-  pot-sized bet and no re-raises. Action tree is identical to
-  river_duo.yaml — only the underlying game differs: 4 hole cards,
-  two independent 5-card boards (dealt up front), pot split evenly
-  across both boards at showdown. OOP acts first (check or bet pot).
-  If OOP checks, IP may bet pot or check back. Whoever faces a bet may
-  call or fold. Both seats start the street with the same fixed 100bb
-  effective stack; the pot itself is randomised so agents see a range
-  of stack-to-pot ratios.
+layout_name: double_board
+payout_type: split_pot
 
-game_name: double_board_plo
-small_blind: 1
-big_blind: 2
+hole_cards: 4
 
-seats:
-  - id: oop
-    acts_first: true
-  - id: ip
-    acts_first: false
+# Both hole cards AND the full 10-node double board are dealt as part
+# of the single declared street, BEFORE the one betting round starts
+# — mirrors river.yaml's own single-entry pattern exactly (see that
+# file's comment: _more_streets() compares street_index against
+# len(street_nodes), so a second entry would demand a phantom second
+# betting round with no new cards). One entry means street_index goes
+# 0 -> 1 at deal time, and the single river_only betting round that
+# follows takes it straight to showdown.
+#
+# This is the file the double-board river trainer scenario should set
+# as its engine_variant (training_config.yaml) — previously that
+# scenario was pointed at plain river.yaml, which only has a 5-node
+# single board, which is why the double-board scenario was never
+# actually dealing a second board.
+board_layout:
+  nodes: 10
+  streets:
+    0: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  street_names:
+    0: "river"
 
-dealer_seat: ip
+points:
+  - name: board1
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
 
-stack:
-  mode: fixed_bb
-  stack_bb: 100.0
+  - name: board2
+    score_type: HIGH
+    node_sets:
+      - [5, 6, 7, 8, 9]
 
-pot:
-  mode: randomized_bb
-  min_pot_bb: 2.0
-  max_pot_bb: 20.0
+# river_only betting: CHECK/BET(pot) on the first action, CALL/FOLD
+# facing a bet — no re-raises, no arbitrary sizing. Same convention as
+# river.yaml / push_fold.yaml. small_blind/big_blind are not posted
+# for this variant — TrainerService undoes any posted blinds after
+# start_hand() and replaces them with a randomized dead pot (see
+# trainer_service.py's _apply_dead_pot / river_duo.yaml's own pot_bb
+# config, reused here via double_board_plo_river_duo's pot_bb).
+betting:
+  type: river_only
+  small_blind: 1
+  big_blind: 2
+  ante: 0
 
-deal:
-  street_index: 3
-  hole_cards_per_player: 4
-  node_count: 10
-  deal_board: true
-  reveal_at_start: true
+showdown:
+  type: OMAHA
 
-start_node: start
-
-nodes:
-  start:
-    seat: oop
-    actions:
-      CHECK: oop_checked
-      BET_100: oop_bet
-  oop_checked:
-    seat: ip
-    actions:
-      CHECK: terminal_check_check
-      BET_100: ip_bet_after_check
-  ip_bet_after_check:
-    seat: oop
-    actions:
-      CALL: terminal_showdown
-      FOLD: terminal_fold_oop
-  oop_bet:
-    seat: ip
-    actions:
-      CALL: terminal_showdown
-      FOLD: terminal_fold_ip
-
-terminals:
-  terminal_check_check:
-    type: showdown
-  terminal_showdown:
-    type: showdown
-  terminal_fold_oop:
-    type: fold
-    folder: oop
-  terminal_fold_ip:
-    type: fold
-    folder: ip
+# No creation_phases — played live via TrainerService, not through the
+# Hand Creation wizard, same as river.yaml / push_fold.yaml.

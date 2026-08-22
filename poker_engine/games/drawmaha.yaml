@@ -1,0 +1,47 @@
+name: drawmaha
+layout_name: single_board
+payout_type: points
+
+# Drawmaha proper deals 5 hole cards with a draw before the flop,
+# discarding down to 4. The river-only RL scenario (drawmaha_river.yaml
+# in duo_games/) starts hands already holding the post-draw 4 cards, so
+# no draw mechanics are needed here — see loader.py: hole_cards is just
+# "how many cards each player holds," draw/discard is a betting-round
+# concern the engine doesn't yet implement (see history_encoder.py's
+# own TODO note on draw support being absent).
+hole_cards: 5
+
+board_layout:
+  nodes: 5
+  streets:
+    0: []                # pre-flop
+    1: [0, 1, 2]          # flop
+    2: [3]                 # turn
+    3: [4]                  # river
+  street_names:
+    0: "pre-flop"
+    1: "flop"
+    2: "turn"
+    3: "river"
+
+# Single point, single board — same shape as holdem.yaml's own "high"
+# point, just with showdown.type: OMAHA below forcing the real
+# Drawmaha showdown rule (exactly 2 of the 4 hole cards + exactly 3 of
+# the 5 board cards). payout_type: points with one point degenerates to
+# "winner takes the whole pot," identical in effect to split_pot with
+# one component — points is used here (not split_pot) to match
+# holdem.yaml's own convention for single-point games.
+points:
+  - name: high
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+betting:
+  type: pot_limit
+  small_blind: 1
+  big_blind: 2
+  ante: 0
+
+showdown:
+  type: OMAHA

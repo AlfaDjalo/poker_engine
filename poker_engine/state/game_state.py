@@ -147,14 +147,36 @@ class GameState:
             if self.betting_type == "push_fold":
                 total = player.current_bet + player.stack
 
-            # River-only: the only ever legal BET is a pot-sized bet
-            # (matching the RL Lab's river_duo.yaml tree, which only
-            # ever offers BET_100). legal_actions() below only offers
-            # BET when to_call == 0, so player.current_bet is always 0
-            # here — total is just the pot-sized amount, capped at the
-            # player's stack (an effective all-in if stack < pot).
-            elif self.betting_type == "river_only":
-                total = min(self.pot, player.current_bet + player.stack)
+            # River-only: trust the caller's amount. TrainerService's
+            # _build_engine_action() already computes the correct total
+            # for every sizing mode this betting_type can see —
+            # sizing:"pot" (pot_fraction * pot, capped at stack) or
+            # sizing:"stack" (a true full shove, current_bet + stack) —
+            # both already capped at the player's actual stack, so there
+            # is nothing left for the engine to re-derive here.
+            #
+            # This branch USED TO unconditionally override to
+            # min(pot, current_bet + stack), on the assumption every
+            # river bet was pot-sized (sizing:"pot" at pot_fraction 1.0,
+            # which made this override a no-op). Once river_duo's "bet"
+            # action_map entry was changed to sizing:"stack" (a real
+            # all-in, see training_config.yaml), this override silently
+            # re-capped every "all-in" shove down to the pot size
+            # whenever stack > pot — e.g. a 100bb (200-chip) stack
+            # against a 100-chip pot only ever committed 100 chips,
+            # leaving 100 chips uncommitted behind on BOTH sides of the
+            # street despite the action being labeled/graded as all-in.
+            # The betting round still completed correctly either way
+            # (no re-raises are ever legal here — see legal_actions()
+            # below), but the actual chips moved didn't match what the
+            # UI/policy believed had happened.
+            #
+            # single_bet (holdem_full_duo / omaha_full_duo): same
+            # "trust the caller" treatment as river_only — TrainerService
+            # already caps every sizing mode at the player's stack before
+            # this is ever called, and single_bet's whole point (like
+            # river_only) is exactly one bet/raise per street, so there
+            # is nothing for the engine to re-derive here either.
 
             additional = total - player.current_bet
 
@@ -360,6 +382,43 @@ class GameState:
                 if p.stack > 0:
                     actions.append(ActionType.BET)
 
+            return actions
+
+        # ------------------------------------------------
+        # single_bet: exactly one voluntary bet/raise allowed per
+        # street (holdem_full_duo / omaha_full_duo), then call/fold
+        # only for the rest of that street. Differs from river_only
+        # above in what it uses to detect "facing a bet": river_only
+        # infers that purely from to_call > 0, which is safe there
+        # because river_duo-style scenarios never post blinds (they
+        # start from a randomized dead pot). single_bet's scenarios DO
+        # post real blinds preflop, so to_call > 0 at the start of a
+        # street can mean "nobody has voluntarily bet yet, this is
+        # just the blind gap" (preflop) rather than "someone already
+        # bet". raises_this_street (reset to 0 every street by
+        # reset_betting_round(), only ever incremented by an actual
+        # BET/RAISE above) is what actually distinguishes the two
+        # cases.
+        # ------------------------------------------------
+        if self.betting_type == "single_bet":
+            if self.raises_this_street == 0:
+                actions = [ActionType.FOLD]
+                if to_call > 0:
+                    actions.append(ActionType.CALL)
+                else:
+                    actions.append(ActionType.CHECK)
+                if p.stack > to_call:
+                    actions.append(ActionType.BET if self.bet_to_call == 0 else ActionType.RAISE)
+                return actions
+
+            # Someone has already bet/raised this street — no more
+            # sizing/re-raising, call or fold only (mirrors river_only
+            # facing-a-bet exactly).
+            actions = [ActionType.FOLD]
+            if to_call > 0:
+                actions.append(ActionType.CALL)
+            else:
+                actions.append(ActionType.CHECK)
             return actions
 
         actions = [ActionType.FOLD]

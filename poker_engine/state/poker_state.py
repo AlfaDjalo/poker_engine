@@ -229,10 +229,20 @@ class PokerState:
 
             self._deal_next_board()
 
+            active = [
+                i for i, p in enumerate(g.players)
+                if not p.has_folded and not p.is_all_in
+            ]
+            if len(active) < 2:
+                # Nobody left who can act (all-in showdown). Stay in
+                # DEAL_BOARD — the caller's loop will keep calling
+                # step(None) to deal remaining streets automatically
+                # until _more_streets() is False, then we resolve.
+                return
+
             g.current_player = self._first_to_act()
 
             g.reset_betting_round()
-
 
             self.phase = Phase.BETTING
             return
