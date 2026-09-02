@@ -1,0 +1,135 @@
+name: pineapple
+layout_name: single_board
+payout_type: points
+
+# Pineapple: each player gets 3 hole cards preflop, bets, then discards
+# one card down to 2 BEFORE the flop is dealt (the discard happens
+# blind, unlike Crazy Pineapple below where it happens after seeing the
+# flop). From there it plays as ordinary hold'em -- any number of hole
+# cards may be used at showdown.
+#
+# REWRITTEN to load via the plain flow_loader.build_flow_graph() path
+# -- no custom pineapple_graph.py builder anymore. The discard round is
+# now expressed inline via this step's own `transitions:` list, mirroring
+# drawmaha.yaml's discard_draw step exactly:
+#   set_first_to_act_discard -> begin_discard_round -> discard_preflop
+#   (self-loop via `{not: {round_complete: {accessor: "active_players"}}}`
+#   until every eligible player has acted, then -> deal_flop).
+#
+# This used to require a custom variant_graphs/pineapple_graph.py +
+# _discard_round.py splice, because yaml_conditions.py had no
+# YAML-reachable accessor returning a player-INDEX LIST (only *_count
+# accessors existed, and RoundComplete needs a list to iterate) -- see
+# _discard_round.py's own docstring for the full history. That gap is
+# closed now that yaml_conditions.py has {accessor: "active_players"}
+# (added for drawmaha.yaml's own draw round, which uses the identical
+# pattern and is confirmed working), so the custom builder is no longer
+# needed for this variant. pineapple_graph.py should be deleted/renamed
+# -- if it's still present, loader.py will keep preferring it over this
+# file's own flow: list (documented precedence: custom builder wins
+# whenever both exist), silently ignoring everything below.
+#
+# min_count: 1, max_count: 1, replace_from_deck: false -- discard
+# EXACTLY one card, no replacement (Discard, not Draw): matches the old
+# splice_discard_round(config={"min_count": 1, "max_count": 1,
+# "replace_from_deck": False}) call this replaces.
+#
+# street_index: -1 on discard_preflop is a deliberate sentinel marking
+# it as NOT a real board street (same convention drawmaha.yaml's
+# discard_draw step uses) -- it's a label only, never structural; see
+# graph_engine_callbacks.py's street-walk functions, which simply pass
+# current_street through untouched for any non-`deal`/non-BETTING node.
+
+node_count: 5
+
+points:
+  - name: main
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+showdown:
+  type: HOLDEM
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 3, eligible: has_stack}
+
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+
+  - id: bet_preflop
+    type: betting
+    rules: {kind: no_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+
+  - id: set_first_to_act_discard
+    type: set_first_to_act
+    config: {offset: 1}
+
+  - id: begin_discard_round
+    type: begin_decision_round
+
+  - id: discard_preflop
+    type: card_select
+    decider: current_player
+    config:
+      min_count: 1
+      max_count: 1
+      replace_from_deck: false
+      eligible: active
+    metadata: {street_index: -1, street_name: discard}
+    transitions:
+      - to: discard_preflop
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: deal_flop
+        when: always
+
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: bet_flop
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: bet_turn
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+
+  - id: bet_river
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+
+  - id: showdown
+    type: showdown
+
+  - id: complete
+    type: noop
+    terminal: true

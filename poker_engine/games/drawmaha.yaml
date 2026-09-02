@@ -1,47 +1,158 @@
 name: drawmaha
 layout_name: single_board
-payout_type: points
+payout_type: split_pot
 
-# Drawmaha proper deals 5 hole cards with a draw before the flop,
-# discarding down to 4. The river-only RL scenario (drawmaha_river.yaml
-# in duo_games/) starts hands already holding the post-draw 4 cards, so
-# no draw mechanics are needed here — see loader.py: hole_cards is just
-# "how many cards each player holds," draw/discard is a betting-round
-# concern the engine doesn't yet implement (see history_encoder.py's
-# own TODO note on draw support being absent).
-hole_cards: 5
+# Drawmaha proper deals 5 hole cards, plays a normal preflop betting
+# round, sees the flop and a flop betting round, THEN draws (discard
+# down to 4, one card, replace_from_deck), then turn/turn-bet,
+# river/river-bet. Implemented below as: deal_hole (5 cards) ->
+# post_blinds -> bet_preflop -> deal_flop -> bet_flop ->
+# set_first_to_act_draw -> begin_draw_round -> discard_draw
+# (CARD_SELECT, exactly 1 card, replace_from_deck) looping via a
+# RoundComplete-guarded self-loop until every eligible player has
+# acted -> deal_turn -> bet_turn -> deal_river -> bet_river.
+#
+# The draw round sits strictly between bet_flop and deal_turn — NOT
+# before post_blinds — so that deal/bet steps still alternate
+# one-for-one around it. board_card.street (session_logger.py's
+# reveal-order counter) and action.street
+# (graph_engine_callbacks._betting_node_street_map's per-decision graph
+# walk) are two independently-derived numbering schemes that only agree
+# when deal and bet nodes alternate cleanly (see
+# CAP_Technical_Document.md's note on useReplay.js's buildNodes); an
+# earlier draft of this file had the draw round BEFORE post_blinds,
+# which broke that alternation and is the likely root cause of the
+# hand replayer's "board cards missing on early streets" symptom for
+# drawmaha hands specifically. street_index: -1 on discard_draw is a
+# deliberate sentinel marking it as NOT a real board street (see that
+# step's own metadata) — it's a label only, never structural.
+#
+# Verified against the real flow_loader.py / yaml_conditions.py /
+# card_select.py source (this file's previous draft had 3 open
+# questions -- resolved as follows):
+#
+#   1. Transition grammar: a `transitions:` entry is {to: ..., when:
+#      <condition spec>} -- NOT `condition:`. The earlier draft used
+#      `condition:`, which flow_loader.py silently ignores (it reads
+#      `t.get("when")`, defaulting to None -> Always()) -- so BOTH
+#      transitions became unconditional, and since the self-loop is
+#      listed first, discard_draw -> discard_draw would fire forever
+#      and the next step would never be reached. Fixed by using `when:`.
+#
+#      Condition value specs also need an explicit {accessor: "..."}
+#      or {constant: ...} wrapper -- {eligible: has_stack} isn't a
+#      recognized value spec shape and raises ValueError. Fixed by
+#      using {accessor: "active_players"} (added to yaml_conditions.py
+#      -- see that file's own fix notes: the accessor registry only
+#      had *_count accessors before, and RoundComplete requires a
+#      list-of-player-indices accessor, not a count).
+#
+#   2. begin_decision_round does NOT set current_player (its handler
+#      only resets round_acted). An explicit set_first_to_act step is
+#      required beforehand, same as every betting step wires one
+#      internally. Offset 1 (first eligible seat after the dealer) is
+#      used here — same convention as every post-flop betting step's
+#      first_to_act_offset: 1 — since the draw round now runs AFTER
+#      bet_flop, not before post_blinds.
+#
+#   3. CardSelectResolver.apply() DOES call state.advance_turn() once
+#      a player who isn't the last to act responds (mirrors betting) --
+#      confirmed correct, no change needed.
+#
+#   Also: card_select's own `eligible` config key ("active" default /
+#   anything else -> remaining_players()) is a different vocabulary
+#   from deal_hole_cards's `eligible` key ("has_stack" is a
+#   deal_hole_cards-only value, from _eligible_for_deal). Using
+#   "has_stack" on discard_draw's config wouldn't error, but it'd
+#   silently fall through to remaining_players() (folded players CAN
+#   exist by this point now that a preflop betting round has already
+#   happened -- remaining_players() correctly excludes them) -- still
+#   fixed to the correct "active" for clarity, and to match the
+#   {accessor: "active_players"} used in the round_complete guard
+#   below, which MUST agree with this config's eligible set or the two
+#   can disagree about who still needs to act.
 
-board_layout:
-  nodes: 5
-  streets:
-    0: []                # pre-flop
-    1: [0, 1, 2]          # flop
-    2: [3]                 # turn
-    3: [4]                  # river
-  street_names:
-    0: "pre-flop"
-    1: "flop"
-    2: "turn"
-    3: "river"
+node_count: 5
 
-# Single point, single board — same shape as holdem.yaml's own "high"
-# point, just with showdown.type: OMAHA below forcing the real
-# Drawmaha showdown rule (exactly 2 of the 4 hole cards + exactly 3 of
-# the 5 board cards). payout_type: points with one point degenerates to
-# "winner takes the whole pot," identical in effect to split_pot with
-# one component — points is used here (not split_pot) to match
-# holdem.yaml's own convention for single-point games.
 points:
   - name: high
     score_type: HIGH
     node_sets:
       - [0, 1, 2, 3, 4]
-
-betting:
-  type: pot_limit
-  small_blind: 1
-  big_blind: 2
-  ante: 0
+  - name: hand
+    score_type: HIGH
+    node_sets: 
+      - []
+    showdown_type_override: HOLDEM
 
 showdown:
   type: OMAHA
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 5, eligible: has_stack}
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+  - id: bet_preflop
+    type: betting
+    rules: {kind: pot_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+  - id: bet_flop
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+  - id: set_first_to_act_draw
+    type: set_first_to_act
+    config: {offset: 1}
+  - id: begin_draw_round
+    type: begin_decision_round
+  - id: discard_draw
+    type: card_select
+    decider: current_player
+    config:
+      min_count: 0
+      max_count: 5
+      replace_from_deck: true
+      eligible: active
+    metadata: {street_index: -1, street_name: draw}
+    transitions:
+      - to: discard_draw
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: deal_turn
+        when: always
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+  - id: bet_turn
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+  - id: bet_river
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+  - id: showdown
+    type: showdown
+  - id: complete
+    type: noop
+    terminal: true

@@ -1,0 +1,70 @@
+name: plo8
+layout_name: single_board
+payout_type: split_pot
+low_qualifier: 8
+
+node_count: 5
+
+points:
+  - name: high
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+  - name: low
+    score_type: LOW_A5
+    node_sets:
+      - [0, 1, 2, 3, 4]
+    scoop_from: high
+
+showdown:
+  type: OMAHA
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 4, eligible: has_stack}
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+  - id: bet_preflop
+    type: betting
+    rules: {kind: pot_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+  - id: bet_flop
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+  - id: bet_turn
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+  - id: bet_river
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+  - id: showdown
+    type: showdown
+  - id: complete
+    type: noop
+    terminal: true

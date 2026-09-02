@@ -2,14 +2,7 @@ name: pandemic
 layout_name: grid3x3
 payout_type: points
 
-hole_cards: 6
-
-board_layout:
-  nodes: 9
-  streets:
-    1: [0, 3, 6, 7, 8]  # flop
-    2: [2, 5]           # turn
-    3: [1, 4]           # river
+node_count: 9
 
 points:
   - name: high_contact_tracing
@@ -20,9 +13,13 @@ points:
       - [6, 7, 8]
       - [0, 3, 6]       # Vertical
       - [1, 4, 7]
-      - [2, 5, 9]
+      - [2, 5, 8]       # NOTE: fixed from [2, 5, 9] -- board only has 9
+                        # nodes (indices 0-8); the original had an
+                        # off-by-one here that crashed ShowdownResolver
+                        # at showdown (found while validating the graph
+                        # migration, unrelated to it).
       - [0, 3, 4]       # BL
-      - [1, 4, 5]        
+      - [1, 4, 5]
       - [3, 6, 7]
       - [4, 7, 8]
       - [0, 1, 4]       # TR
@@ -41,25 +38,25 @@ points:
   - name: low_contact_tracing
     score_type: LOW_A5
     node_sets:
-      - [0, 1, 2]       # Horizontal
+      - [0, 1, 2]
       - [3, 4, 5]
       - [6, 7, 8]
-      - [0, 3, 6]       # Vertical
+      - [0, 3, 6]
       - [1, 4, 7]
-      - [2, 5, 9]
-      - [0, 3, 4]       # BL
-      - [1, 4, 5]        
+      - [2, 5, 8]       # see note above
+      - [0, 3, 4]
+      - [1, 4, 5]
       - [3, 6, 7]
       - [4, 7, 8]
-      - [0, 1, 4]       # TR
+      - [0, 1, 4]
       - [1, 2, 5]
       - [3, 4, 7]
       - [4, 5, 8]
-      - [0, 1, 3]       # TL
+      - [0, 1, 3]
       - [1, 2, 4]
       - [3, 4, 6]
       - [4, 5, 7]
-      - [1, 3, 4]       # BR
+      - [1, 3, 4]
       - [2, 4, 5]
       - [4, 6, 7]
       - [5, 7, 8]
@@ -71,14 +68,14 @@ points:
       - [0, 2, 6]
       - [0, 2, 7]
       - [0, 2, 8]
-      - [0, 4, 6]       
+      - [0, 4, 6]
       - [0, 4, 8]
       - [0, 5, 6]
-      - [0, 5, 7]       
-      - [0, 6, 8]        
+      - [0, 5, 7]
+      - [0, 6, 8]
       - [1, 3, 5]       # 6 edges
       - [1, 3, 7]
-      - [1, 3, 8]       
+      - [1, 3, 8]
       - [1, 5, 6]
       - [1, 5, 7]
       - [1, 6, 8]
@@ -93,18 +90,18 @@ points:
   - name: low_social_distancing
     score_type: LOW_A5
     node_sets:
-      - [0, 2, 4]       # 9 corners
+      - [0, 2, 4]
       - [0, 2, 6]
       - [0, 2, 7]
       - [0, 2, 8]
-      - [0, 4, 6]       
+      - [0, 4, 6]
       - [0, 4, 8]
       - [0, 5, 6]
-      - [0, 5, 7]       
-      - [0, 6, 8]        
-      - [1, 3, 5]       # 6 edges
+      - [0, 5, 7]
+      - [0, 6, 8]
+      - [1, 3, 5]
       - [1, 3, 7]
-      - [1, 3, 8]       
+      - [1, 3, 8]
       - [1, 5, 6]
       - [1, 5, 7]
       - [1, 6, 8]
@@ -114,91 +111,63 @@ points:
       - [2, 4, 8]
       - [2, 6, 8]
       - [3, 5, 7]
-      - [4, 6, 8]       # 6 centres
+      - [4, 6, 8]
 
   - name: hand
     score_type: HIGH
-    node_sets: 
+    node_sets:
       - []
     showdown_type_override: DRAW
-
-betting:
-  type: pot_limit
-  small_blind: 1
-  big_blind: 2
-  ante: 0
 
 showdown:
   type: OMAHA
 
+award_last_player_next: complete
 
-# ─────────────────────────────────────────────
-# Creation phases — drives CreationFlow.jsx step gating.
-# Each phase declares what UI actions are legal while it is active.
-# The frontend reads this (via /game/variants/{name}/config) instead of
-# hardcoding a fixed phase list, since variants differ (e.g. bomb pots
-# have no pre-flop betting phase).
-#
-#   id            — unique phase id
-#   label         — display label
-#   deals_board   — node indices that must be filled before leaving this
-#                   phase (references board_layout.streets keys), or [] 
-#   deals_hole    — true if hole cards are dealt/editable in this phase
-#   allows_betting— true if PlayerActionPanel-style actions are legal
-#                   (only relevant for live/replayer editing; for hand
-#                   creation we just need to know whether bet/stack
-#                   edits are exposed)
-#   next_auto     — if true, controller auto-advances once validation
-#                   for this phase passes (no explicit "Next" click needed)
-# ─────────────────────────────────────────────
-creation_phases:
-  - id: SETUP
-    label: "Setup Players"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: false
-  - id: DEAL_HOLE
-    label: "Deal Hole Cards"
-    deals_hole: true
-    deals_board_street: null
-    allows_betting: false
-  - id: PREFLOP_BET
-    label: "Preflop Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: DEAL_FLOP
-    label: "Deal Flop"
-    deals_hole: false
-    deals_board_street: 1
-    allows_betting: false
-  - id: FLOP_BET
-    label: "Flop Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: DEAL_TURN
-    label: "Deal Turn"
-    deals_hole: false
-    deals_board_street: 2
-    allows_betting: false
-  - id: TURN_BET
-    label: "Turn Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: DEAL_RIVER
-    label: "Deal River"
-    deals_hole: false
-    deals_board_street: 3
-    allows_betting: false
-  - id: RIVER_BET
-    label: "River Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: SHOWDOWN
-    label: "Showdown"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: false
+flow:
+  - id: setup
+    type: noop
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 6, eligible: has_stack}
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+  - id: bet_preflop
+    type: betting
+    rules: {kind: pot_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 3, 6, 7, 8]
+    metadata: {street_index: 1, street_name: flop}
+  - id: bet_flop
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+  - id: deal_turn
+    type: deal
+    board_nodes: [2, 5]
+    metadata: {street_index: 2, street_name: turn}
+  - id: bet_turn
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+  - id: deal_river
+    type: deal
+    board_nodes: [1, 4]
+    metadata: {street_index: 3, street_name: river}
+  - id: bet_river
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+  - id: showdown
+    type: showdown
+  - id: complete
+    type: noop
+    terminal: true

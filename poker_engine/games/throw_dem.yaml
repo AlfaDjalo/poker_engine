@@ -1,0 +1,185 @@
+name: throw_dem
+layout_name: single_board
+payout_type: points
+
+# Throw dem (CAP_Game_Guide.docx, Chapter 2): "a single board hold'em
+# style game where each player is dealt five hold cards, and must
+# discard one card after each street, leaving two cards in hand on the
+# river. If a player does not discard one card on a street, their hand
+# is forfeit."
+#
+# Read as: 5 hole cards dealt preflop; one discard after EACH of the
+# three post-flop betting rounds (flop, turn, river) -- 5 -> 4 -> 3 -> 2,
+# landing on exactly 2 hole cards once the river is settled, matching
+# "leaving two cards in hand on the river". Preflop has no discard (no
+# street has happened yet to discard "after").
+#
+# The guide's "hand is forfeit" clause for skipping a mandatory discard
+# is not enforced here: CardSelectResolver requires min_count == max_count
+# == 1 for every eligible player before RoundComplete is satisfied, so a
+# player structurally CANNOT advance the round without discarding --
+# there is no path through the graph that represents "declined to
+# discard", so there is nothing for a forfeit rule to trigger against.
+# If a future UI/AI integration needs to represent an explicit
+# forfeit-by-refusal (as opposed to always discarding), that requires
+# either a BOOLEAN "discard or forfeit?" step ahead of the CARD_SELECT
+# node, or a timeout->auto-fold policy at the calling layer -- neither
+# is engine-graph work by itself.
+#
+# REWRITTEN to load via the plain flow_loader.build_flow_graph() path
+# -- no custom throw_dem_graph.py builder anymore. All three discard
+# rounds are expressed inline, same proven pattern as drawmaha.yaml's
+# discard_draw / pineapple.yaml's discard_preflop: a
+# set_first_to_act -> begin_decision_round -> card_select trio per
+# round, each card_select step's own `transitions:` self-looping via
+# `{not: {round_complete: {accessor: "active_players"}}}` until every
+# eligible player has discarded, then moving on to the next deal.
+#
+# Each round needs ITS OWN uniquely-named set_first_to_act/
+# begin_decision_round/card_select step ids -- flow_loader.py requires
+# every flow step id to be unique across the whole file, so the three
+# rounds can't share "set_first_to_act_discard"/"begin_discard_round"
+# the way a single-discard variant (pineapple/crazy_pineapple) can.
+#
+# throw_dem_graph.py should be deleted/renamed -- if it's still
+# present, loader.py keeps preferring it over this file's own flow:
+# list (documented precedence: custom builder wins whenever both
+# exist), silently ignoring everything below.
+
+node_count: 5
+
+points:
+  - name: main
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+showdown:
+  type: HOLDEM
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 5, eligible: has_stack}
+
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+
+  - id: bet_preflop
+    type: betting
+    rules: {kind: no_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: bet_flop
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: set_first_to_act_discard_flop
+    type: set_first_to_act
+    config: {offset: 1}
+
+  - id: begin_discard_round_flop
+    type: begin_decision_round
+
+  - id: discard_flop
+    type: card_select
+    decider: current_player
+    config:
+      min_count: 1
+      max_count: 1
+      replace_from_deck: false
+      eligible: active
+    metadata: {street_index: -1, street_name: discard}
+    transitions:
+      - to: discard_flop
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: deal_turn
+        when: always
+
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: bet_turn
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: set_first_to_act_discard_turn
+    type: set_first_to_act
+    config: {offset: 1}
+
+  - id: begin_discard_round_turn
+    type: begin_decision_round
+
+  - id: discard_turn
+    type: card_select
+    decider: current_player
+    config:
+      min_count: 1
+      max_count: 1
+      replace_from_deck: false
+      eligible: active
+    metadata: {street_index: -1, street_name: discard}
+    transitions:
+      - to: discard_turn
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: deal_river
+        when: always
+
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+
+  - id: bet_river
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+
+  - id: set_first_to_act_discard_river
+    type: set_first_to_act
+    config: {offset: 1}
+
+  - id: begin_discard_round_river
+    type: begin_decision_round
+
+  - id: discard_river
+    type: card_select
+    decider: current_player
+    config:
+      min_count: 1
+      max_count: 1
+      replace_from_deck: false
+      eligible: active
+    metadata: {street_index: -1, street_name: discard}
+    transitions:
+      - to: discard_river
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: showdown
+        when: always
+
+  - id: showdown
+    type: showdown
+
+  - id: complete
+    type: noop
+    terminal: true

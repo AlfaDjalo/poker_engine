@@ -1,103 +1,66 @@
-name: five_points_high_low_high_low_hand
+name: double_board_plo_bomb_pot
 layout_name: double_board
-payout_type: points
+payout_type: split_pot
 
-hole_cards: 6
-
-board_layout:
-  nodes: 10
-  streets:
-    0: [0, 1, 2, 5, 6, 7]    # flop
-    1: [3, 8]                # turn
-    2: [4, 9]                # river
+node_count: 10
 
 points:
-  - name: high_board1
+  - name: board1
     score_type: HIGH
     node_sets:
       - [0, 1, 2, 3, 4]
-
-  - name: low_board1
-    score_type: LOW_A5
-    scoop_from: high_board1
-    node_sets:
-      - [0, 1, 2, 3, 4]
-
-  - name: high_board2
+  - name: board2
     score_type: HIGH
     node_sets:
       - [5, 6, 7, 8, 9]
-
-  - name: low_board2
-    score_type: LOW_A5
-    scoop_from: high_board2
-    node_sets:
-      - [5, 6, 7, 8, 9]
-
-  - name: hand
-    score_type: HIGH
-    node_sets: 
-      - []
-    showdown_type_override: DRAW
-
-betting:
-  type: pot_limit
-  small_blind: 1
-  big_blind: 2
-  ante: 0
 
 showdown:
   type: OMAHA
 
+award_last_player_next: complete
 
-creation_phases:
-  - id: SETUP
-    label: "Setup Players"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: false
-  - id: DEAL_HOLE
-    label: "Deal Hole Cards"
-    deals_hole: true
-    deals_board_street: null
-    allows_betting: false
-  - id: PREFLOP_BET
-    label: "Preflop Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: DEAL_FLOP
-    label: "Deal Flop"
-    deals_hole: false
-    deals_board_street: 1
-    allows_betting: false
-  - id: FLOP_BET
-    label: "Flop Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: DEAL_TURN
-    label: "Deal Turn"
-    deals_hole: false
-    deals_board_street: 2
-    allows_betting: false
-  - id: TURN_BET
-    label: "Turn Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: DEAL_RIVER
-    label: "Deal River"
-    deals_hole: false
-    deals_board_street: 3
-    allows_betting: false
-  - id: RIVER_BET
-    label: "River Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: SHOWDOWN
-    label: "Showdown"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: false
+# Bomb pot: antes posted automatically, both flops dealt simultaneously
+# before the first (and only pre-street) betting round -- no separate
+# pre-flop betting phase, unlike holdem/plo8 above.
+flow:
+  - id: setup
+    type: noop
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 4, eligible: has_stack}
+  - id: post_antes
+    type: post_antes
+    config: {ante: 5}
+  - id: deal_both_flops
+    type: deal
+    board_nodes: [0, 1, 2, 5, 6, 7]
+    metadata: {street_index: 0, street_name: flop}
+  - id: bet_flop
+    type: betting
+    rules: {kind: pot_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: flop}
+  - id: deal_both_turns
+    type: deal
+    board_nodes: [3, 8]
+    metadata: {street_index: 1, street_name: turn}
+  - id: bet_turn
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: turn}
+  - id: deal_both_rivers
+    type: deal
+    board_nodes: [4, 9]
+    metadata: {street_index: 2, street_name: river}
+  - id: bet_river
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: river}
+  - id: showdown
+    type: showdown
+  - id: complete
+    type: noop
+    terminal: true

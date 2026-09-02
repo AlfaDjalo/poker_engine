@@ -1,122 +1,81 @@
-import yaml
-from pathlib import Path
+"""
+poker_engine/rules/loader.py
 
+load_game(name) -> (GameDefinition, GameRules, GameGraph)
+
+Parses a variant's {name}.yaml. Scoring (points/showdown/payout) is
+unchanged from the pre-graph model -- none of that is "flow", and none
+of it needed to change. The `flow:` list is compiled into a GameGraph
+by flow_loader.build_flow_graph(); see that module for the flow schema
+itself.
+
+A variant needing flow that the declarative `flow:` schema can't express
+(a genuinely dynamic structure, not just branching -- ordinary branching
+is already covered by a step's `transitions:`) may provide
+poker_engine/rules/variant_graphs/{name}_graph.py with a
+`build_graph(raw_yaml) -> GraphSkeleton` function; load_game() prefers
+that over `flow:` if present. This is expected to be rare -- almost
+everything, including future ESG/Christmas/Grinch/Pass-the-Trash/Draw/
+Discard variants, should be expressible as flow + transitions.
+"""
+
+import importlib
+from pathlib import Path
+from typing import Optional, Tuple
+
+import yaml
+
+from poker_engine.graph.flow_loader import build_flow_graph
+from poker_engine.graph.game_graph import GameGraph
 from poker_engine.rules.game_definition import GameDefinition
 from poker_engine.rules.game_rules import GameRules, PointDefinition
-
 from poker_engine.poker_eval import ScoreType, ShowdownType
 
-
 BASE_PATH = Path(__file__).parent
-DEFAULT_STREET_NAMES = ["pre-flop", "flop", "turn", "river"]
+_CUSTOM_GRAPH_PACKAGE = "poker_engine.rules.variant_graphs"
 
-def _default_street_names(index: int) -> str:
-    if index < len(DEFAULT_STREET_NAMES):
-        return DEFAULT_STREET_NAMES[index]
-    return f"street_{index}"
 
-def load_game(name):
-
+def load_game(name: str) -> Tuple[GameDefinition, GameRules, GameGraph]:
     path = BASE_PATH / f"{name}.yaml"
-
     with open(path) as f:
         data = yaml.safe_load(f)
 
     # -----------------------------
-    # board layout
+    # points / scoring (unchanged from the pre-graph model)
     # -----------------------------
-
-    raw_streets = data["board_layout"]["streets"]
-
-    # Keys are street indices (highest = last/showdown street).
-    # Streets with no nodes are implicitly zero cards dealt.   
-    max_index = max(int(k) for k in raw_streets)
-
-    street_nodes = []
-    street_names_raw = data["board_layout"].get("street_names", {})
-
-    street_nodes_list = []
-    street_names = []
-
-    for i in range(max_index + 1):
-        nodes = raw_streets.get(i, raw_streets.get(str(i), []))
-        street_nodes_list.append(list(nodes))
-        street_name = street_names_raw.get(i, raw_streets.get(str(i), _default_street_names(i)))
-        street_names.append(street_name)
-
-    street_nodes = street_nodes_list
-    board_cards_per_street = [len(s) for s in street_nodes]
-        
-    board_cards_per_street = [len(s) for s in street_nodes]
-    
-    node_count = data["board_layout"]["nodes"]
-    # -----------------------------
-    # points
-    # ----------------------------- 
 
     points = []
-
     score_types = set()
 
     for p in data["points"]:
-
         score_type = getattr(ScoreType, p["score_type"])
-
         score_types.add(score_type)
 
         override_str = p.get("showdown_type_override")
-        showdown_type_override = (
-            getattr(ShowdownType, override_str) if override_str else None
-        )
+        showdown_type_override = getattr(ShowdownType, override_str) if override_str else None
 
         points.append(
-
             PointDefinition(
                 name=p["name"],
                 score_type=score_type,
                 node_sets=[tuple(ns) for ns in p["node_sets"]],
                 showdown_type_override=showdown_type_override,
-                scoop_from=p.get("scoop_from")
+                scoop_from=p.get("scoop_from"),
             )
-        )   
+        )
 
     score_types = list(score_types)
-
-    # -----------------------------
-    # showdown
-    # -----------------------------
-
     showdown_type = getattr(ShowdownType, data["showdown"]["type"])
-
-    # -----------------------------
-    # betting
-    # -----------------------------
-
-    betting = data["betting"]
-
-    betting_type = betting.get("type", "holdem")
-    small_blind = betting.get("small_blind", 0)
-    big_blind = betting.get("big_blind", 0)
-    ante = betting.get("ante", 0)
 
     # -----------------------------
     # GameDefinition
     # -----------------------------
-    #     
+
     game_def = GameDefinition(
-        hole_cards=data["hole_cards"],
-        board_cards_per_street=board_cards_per_street,
-        street_nodes=street_nodes,
-        street_names=street_names,
-        score_types=score_types,
-        node_count=node_count,
-        # low_qualifier=data.get("low_qualifier"),
-        betting_type=betting_type,
-        small_blind=small_blind,
-        big_blind=big_blind,
-        ante=ante,
-        layout_name=data.get("layout_name"),
         game_name=name,
+        node_count=data["node_count"],
+        score_types=score_types,
+        layout_name=data.get("layout_name"),
     )
 
     # -----------------------------
@@ -132,4 +91,33 @@ def load_game(name):
         no_qualify_action=data.get("no_qualify_action", "scoop"),
     )
 
-    return game_def, rules
+    # -----------------------------
+    # Graph
+    # -----------------------------
+
+    custom_builder = _resolve_custom_graph_builder(name)
+    if custom_builder is not None:
+        skeleton = custom_builder(data)
+    else:
+        if "flow" not in data:
+            raise ValueError(
+                f"{name}.yaml has no 'flow:' section and no "
+                f"poker_engine/rules/variant_graphs/{name}_graph.py -- "
+                f"nothing to build a graph from"
+            )
+        skeleton = build_flow_graph(data["flow"], award_last_player_next=data.get("award_last_player_next"))
+
+    graph = skeleton.build()
+
+    return game_def, rules, graph
+
+
+def _resolve_custom_graph_builder(name: str) -> Optional[callable]:
+    try:
+        module = importlib.import_module(f"{_CUSTOM_GRAPH_PACKAGE}.{name}_graph")
+    except ModuleNotFoundError:
+        return None
+    build_graph = getattr(module, "build_graph", None)
+    if build_graph is None:
+        raise AttributeError(f"{module.__name__} exists but does not define build_graph(raw_yaml)")
+    return build_graph

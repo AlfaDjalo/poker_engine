@@ -2,20 +2,7 @@ name: holdem
 layout_name: single_board
 payout_type: points
 
-hole_cards: 2
-
-board_layout:
-  nodes: 5
-  streets:
-    0: []         # pre-flop
-    1: [0, 1, 2]   # flop
-    2: [3]         # turn
-    3: [4]         # river
-  street_names:
-    0: "pre-flop"
-    1: "flop"
-    2: "turn"
-    3: "river"
+node_count: 5
 
 points:
   - name: main
@@ -23,82 +10,66 @@ points:
     node_sets:
       - [0, 1, 2, 3, 4]
 
-betting:
-  type: no_limit
-  small_blind: 1
-  big_blind: 2
-  ante: 0
-
 showdown:
   type: HOLDEM
 
-# ─────────────────────────────────────────────
-# Creation phases — drives CreationFlow.jsx step gating.
-# Each phase declares what UI actions are legal while it is active.
-# The frontend reads this (via /game/variants/{name}/config) instead of
-# hardcoding a fixed phase list, since variants differ (e.g. bomb pots
-# have no pre-flop betting phase).
-#
-#   id            — unique phase id
-#   label         — display label
-#   deals_board   — node indices that must be filled before leaving this
-#                   phase (references board_layout.streets keys), or [] 
-#   deals_hole    — true if hole cards are dealt/editable in this phase
-#   allows_betting— true if PlayerActionPanel-style actions are legal
-#                   (only relevant for live/replayer editing; for hand
-#                   creation we just need to know whether bet/stack
-#                   edits are exposed)
-#   next_auto     — if true, controller auto-advances once validation
-#                   for this phase passes (no explicit "Next" click needed)
-# ─────────────────────────────────────────────
-creation_phases:
-  - id: SETUP
-    label: "Setup Players"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: false
-  - id: DEAL_HOLE
-    label: "Deal Hole Cards"
-    deals_hole: true
-    deals_board_street: null
-    allows_betting: false
-  - id: PREFLOP_BET
-    label: "Preflop Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: DEAL_FLOP
-    label: "Deal Flop"
-    deals_hole: false
-    deals_board_street: 1
-    allows_betting: false
-  - id: FLOP_BET
-    label: "Flop Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: DEAL_TURN
-    label: "Deal Turn"
-    deals_hole: false
-    deals_board_street: 2
-    allows_betting: false
-  - id: TURN_BET
-    label: "Turn Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: DEAL_RIVER
-    label: "Deal River"
-    deals_hole: false
-    deals_board_street: 3
-    allows_betting: false
-  - id: RIVER_BET
-    label: "River Betting"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: true
-  - id: SHOWDOWN
-    label: "Showdown"
-    deals_hole: false
-    deals_board_street: null
-    allows_betting: false
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 2, eligible: has_stack}
+
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+
+  - id: bet_preflop
+    type: betting
+    rules: {kind: no_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: bet_flop
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: bet_turn
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+
+  - id: bet_river
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+
+  - id: showdown
+    type: showdown
+
+  - id: complete
+    type: noop
+    terminal: true
