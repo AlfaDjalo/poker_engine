@@ -1,8 +1,8 @@
 """
 poker_engine/graph/graph_state.py
 
-GraphGameState extends the existing GameState with the two pieces of
-per-hand data the graph model needs on top of it:
+GraphGameState extends the existing GameState with the per-hand data the
+graph model needs on top of it:
 
   - current_node: which Node the hand is currently sitting at. This is
     the single fact that drives everything an AI/UI needs to know --
@@ -15,6 +15,27 @@ per-hand data the graph model needs on top of it:
     and it's the natural place to look when reasoning about "what
     already happened this hand" without inventing a bespoke state field
     for every new mechanic.
+
+  - round_acted: generic multi-player round tracking for DECISION
+    domains other than BETTING (which already has its own mature
+    round-completion machinery -- players_acted/bet_to_call/last_to_act
+    via betting_round_complete() -- reused as-is rather than
+    duplicated). See begin_round()/mark_acted()/has_acted() below.
+
+  - persistent_last_aggressor: a generic "who was last aggressive"
+    tracker that, UNLIKE GameState.last_aggressor, is never reset by
+    reset_betting_round() -- it persists across streets. Any mechanic
+    needing "last aggressor, falling back through streets all the way
+    to the forced bets" reads THIS, not the per-street last_aggressor.
+    Grinch is the first consumer, but this is deliberately implemented
+    as a separate, general-purpose primitive -- not Grinch-specific --
+    since other variants/mechanics will want the same "who acted last"
+    fallback chain. Seeded by handle_post_blinds/handle_post_antes (see
+    graph_engine.py: posting the BB is the base preflop fallback when
+    blinds are posted; the first player to post an ante is the
+    fallback only when there are no blinds at all, e.g. a bomb pot) and
+    updated on every real BET/RAISE by BettingResolver.apply() (see
+    decision_domains/betting.py).
 
 This is deliberately a THIN extension. Everything that already existed
 (players, node_cards, pot, discard_pile, betting fields, etc.) is
@@ -44,24 +65,24 @@ from poker_engine.state.player_state import PlayerState
 
 class GraphGameState(GameState):
 
-    __slots__ = ("current_node", "decisions", "round_acted")
+    __slots__ = (
+        "current_node",
+        "decisions",
+        "round_acted",
+        "persistent_last_aggressor",
+    )
 
     def __init__(self, players: List[PlayerState], betting_type: str = "no_limit"):
         super().__init__(players, betting_type=betting_type)
         self.current_node: Optional[str] = None
         self.decisions: Dict[str, Any] = {}
 
-        # Generic multi-player round tracking, for DECISION domains other
-        # than BETTING (which already has its own mature round-completion
-        # machinery -- players_acted/bet_to_call/last_to_act via
-        # betting_round_complete() -- reused as-is rather than duplicated).
-        # A CARD_SELECT discard round, for instance, reuses current_player
-        # + advance_turn() to drive turn order exactly like betting does,
-        # but tracks completion via round_acted instead of bet amounts:
-        # each player's resolver call adds itself here, and a node's
-        # "everyone's decided" transition condition compares round_acted
-        # against the domain's eligible-player set (see condition.RoundComplete).
+        # See module docstring.
         self.round_acted: set = set()
+
+        # See module docstring. None until seeded by post_blinds/
+        # post_antes at the start of a hand.
+        self.persistent_last_aggressor: Optional[int] = None
 
     def record_decision(self, key: str, value: Any) -> None:
         """
@@ -91,3 +112,11 @@ class GraphGameState(GameState):
 
     def has_acted(self, player_index: int) -> bool:
         return player_index in self.round_acted
+
+    def record_aggressor(self, player_index: int) -> None:
+        """
+        Set the persistent (cross-street) last-aggressor. See module
+        docstring -- this is the generic primitive; Grinch is one
+        consumer of it, not its owner.
+        """
+        self.persistent_last_aggressor = player_index

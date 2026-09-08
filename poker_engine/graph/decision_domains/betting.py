@@ -40,9 +40,23 @@ BettingRules subclass yet -- AllInOrFoldRules already covers push-fold,
 but river_only would need a new, small BettingRules subclass. That's an
 additive task (write one more BettingRules subclass) whenever it's
 needed, not a change to this resolver or the graph engine.
+
+Persistent (cross-street) last-aggressor tracking
+--------------------------------------------------
+Every real BET/RAISE also records the acting player as the graph
+state's PERSISTENT last aggressor (GraphGameState.persistent_last_aggressor,
+via state.record_aggressor()) -- distinct from GameState.last_aggressor,
+which reset_betting_round() clears every street. This is a generic
+primitive (any future mechanic needing "who bet/raised last, falling
+back across streets" reads it), not something scoped to Grinch, which
+is simply its first consumer. The other end of the fallback chain --
+seeding it from the forced bets (BB, or first ante-poster if there are
+no blinds) at the start of a hand -- lives in graph_engine.py's
+handle_post_blinds/handle_post_antes.
 """
 
 from poker_engine.actions.action import Action
+from poker_engine.actions.action_type import ActionType
 from poker_engine.graph.core_types import (
     BettingOption,
     DecisionDomain,
@@ -123,13 +137,22 @@ class BettingResolver(DecisionDomainResolver):
         self.validate(node, state, deck, response)
 
         action: Action = response.value
+        actor = state.current_player
+
         state.apply_action(action)
         state.record_decision(f"{node.id}:last_action", action)
+
+        if action.type in (ActionType.BET, ActionType.RAISE):
+            # Persists across streets -- see module docstring and
+            # GraphGameState.record_aggressor(). Every caller running
+            # the graph engine uses a GraphGameState, so this attribute
+            # is always present.
+            state.record_aggressor(actor)
 
         # Snapshot completion BEFORE advancing current_player. GameState.
         # betting_round_complete()'s "turn has cycled back to last_to_act"
         # check is only meaningful evaluated once, immediately after the
-        # action that was just applied -- re-evaluating it live after
+        # action that was just applied; re-evaluating it live after
         # advance_turn() has already moved current_player would give a
         # false positive the instant current_player first cycles around
         # to equal last_to_act, even though that player hasn't acted yet

@@ -9,7 +9,8 @@ adjacent-seat passing; add more rules here as needed, e.g. a specific
 seat offset). The player only ever chooses WHICH cards; the recipient is
 never a choice.
 
-Simultaneity, and why apply() doesn't move cards immediately:
+Simultaneity, and why apply() doesn't move cards immediately
+--------------------------------------------------------------
 Pass-the-trash is a blind, simultaneous exchange -- every player chooses
 without seeing what anyone else passed or received. If each player's
 cards were moved into their target's hand_mask the moment that player
@@ -20,9 +21,32 @@ per player (via state.record_decision, under a node-scoped key) and
 advances the round; nothing physically moves yet. Once every eligible
 player has acted (RoundComplete), the graph is expected to route through
 an AUTO node with auto_type == "distribute_passes" (config:
-{"decision_node": <this node's id>}), whose handler calls
-execute_pending_passes() below to apply every recorded pass at once, only
-then removing cards from senders' hands and adding them to recipients'.
+{"decision_node": <this node's id>}), whose handler
+(graph_engine.handle_distribute_passes) calls execute_pending_passes()
+below to apply every recorded pass at once, only then removing cards
+from senders' hands and adding them to recipients'.
+
+Two-phase contract for Backend/Frontend
+------------------------------------------
+This two-step shape ("everyone identifies their discard first, THEN a
+single simultaneous distribution happens") is deliberately visible on
+the wire, not just internal to the resolver:
+
+  1. Every DecisionRequest this resolver builds carries
+     context={"phase": "select", "simultaneous": True}. A UI should
+     treat this as "nobody has received anything yet, for ANY player,
+     regardless of what order you happen to be walking players in" --
+     even though the Backend/Frontend necessarily processes each
+     player's selection one HTTP call at a time, that's a UI/transport
+     artifact, not a game-state fact; no player's hand should visibly
+     change until distribution happens.
+  2. execute_pending_passes() (called by handle_distribute_passes once
+     the round completes) returns a list of exactly what moved --
+     [{"player", "card_ids", "target"}, ...] -- which the engine exposes
+     as engine.last_distributed_passes, and callbacks.py fires exactly
+     once via on_cards_distributed(engine, distributions). THAT is the
+     one moment a consumer should reveal received cards. See
+     callbacks.py and CAP_Technical_Quick_Reference.md §3.4.
 
 Node config:
   count          -> exact number of cards to pass (required)
@@ -67,7 +91,18 @@ class CardPassResolver(DecisionDomainResolver):
             target=ZoneRef(CardZone.HAND, target),
             count=node.config["count"],
         )
-        return DecisionRequest(node_id=node.id, domain=self.domain, player_index=player, options=(option,))
+        return DecisionRequest(
+            node_id=node.id,
+            domain=self.domain,
+            player_index=player,
+            options=(option,),
+            # See module docstring "Two-phase contract" -- tells a
+            # consumer this is a SIMULTANEOUS/blind round: no cards
+            # should be shown as "received" by anyone while this phase
+            # is still active, no matter what order the caller happens
+            # to process players in.
+            context={"phase": "select", "simultaneous": True},
+        )
 
     def validate(self, node: Node, state, deck, response: DecisionResponse) -> None:
         super().validate(node, state, deck, response)
@@ -119,16 +154,42 @@ class CardPassResolver(DecisionDomainResolver):
         return state.current_player
 
     def _resolve_target(self, node: Node, state, actor: int) -> int:
+        """
+        Resolve "left"/"right" against the RING OF PLAYERS STILL IN THE
+        HAND (state.remaining_players() -- not folded, not sitting out;
+        see PlayerState.sitting_out and GameState.remaining_players()),
+        never a raw (actor +/- 1) % n over every physical seat.
+
+        A raw seat-index +/-1 would happily route a pass to a folded
+        player (who has no hand_mask to receive cards into -- CardMove
+        would still "succeed" mechanically, but the pass would be
+        silently lost/duplicated from a gameplay standpoint) or a
+        sitting-out seat (never dealt in at all). Walking
+        remaining_players() in seat order instead means "left"/"right"
+        always resolves to the next/previous player ACTUALLY holding a
+        hand this street, exactly matching what a human table means by
+        "pass to your left" when some seats are out.
+        """
         rule = node.config.get("target_rule", "left")
-        n = len(state.players)
+        remaining = state.remaining_players()
+
+        if actor not in remaining:
+            raise ValueError(
+                f"CARD_PASS target resolution: actor {actor} is not among "
+                f"remaining_players() ({remaining}) -- engine invariant "
+                f"violated, the graph engine should never offer a CARD_PASS "
+                f"decision to a folded/sitting-out player"
+            )
+
+        idx = remaining.index(actor)
         if rule == "left":
-            return (actor + 1) % n
+            return remaining[(idx + 1) % len(remaining)]
         if rule == "right":
-            return (actor - 1) % n
+            return remaining[(idx - 1) % len(remaining)]
         raise ValueError(f"Unknown CARD_PASS target_rule: {rule!r}")
 
 
-def execute_pending_passes(node_id: str, state, deck) -> None:
+def execute_pending_passes(node_id: str, state, deck) -> List[Dict[str, Any]]:
     """
     Applies every CARD_PASS decision recorded at `node_id`, simultaneously,
     once its round is complete. Meant to be called by the graph engine's
@@ -140,6 +201,12 @@ def execute_pending_passes(node_id: str, state, deck) -> None:
     and a player's own outgoing cards were already fixed at decision time
     (chosen from their pre-exchange hand), so passes can't interfere with
     each other regardless of application order.
+
+    Returns one record per completed pass -- {"player", "card_ids",
+    "target"} -- so the caller (graph_engine.py's
+    handle_distribute_passes) can surface exactly what moved, for the
+    Backend/Frontend "reveal" step (see callbacks.py's
+    on_cards_distributed).
     """
     prefix = f"{_PENDING_KEY_PREFIX}:{node_id}:"
     pending: List[Tuple[str, Tuple[Tuple[int, ...], int]]] = [
@@ -147,6 +214,8 @@ def execute_pending_passes(node_id: str, state, deck) -> None:
     ]
 
     executor = CardMoveExecutor()
+    distributions: List[Dict[str, Any]] = []
+
     for key, (card_ids, target_index) in pending:
         player = int(key[len(prefix):])
         move = CardMove(
@@ -155,4 +224,7 @@ def execute_pending_passes(node_id: str, state, deck) -> None:
             card_ids=card_ids,
         )
         executor.execute(move, state, deck)
+        distributions.append({"player": player, "card_ids": card_ids, "target": target_index})
         del state.decisions[key]
+
+    return distributions

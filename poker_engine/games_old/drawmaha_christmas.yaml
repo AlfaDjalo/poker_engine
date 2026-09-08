@@ -1,0 +1,122 @@
+name: drawmaha_christmas
+layout_name: single_board
+payout_type: split_pot
+
+# Christmas: same shape as drawmaha_esg.yaml, but each check uses
+# mode: christmas -- deck_remaining_count >= remaining_board_cards +
+# remaining_players, checked against the DECK rather than the discard
+# pile (so it doesn't depend on anyone having folded/discarded).
+#
+# remaining_board_cards is a per-check CONSTANT (the number of board
+# cards still to be dealt across the REST of the hand, counted from
+# immediately after this check's own street's board is already down):
+#   esg_flop check (flop just dealt):  turn(1) + river(1) = 2
+#   esg_turn check (turn just dealt):  river(1)           = 1
+#   esg_river check (river just dealt): none left          = 0
+# A "christmas" check with remaining_board_cards: 0 (the river one)
+# can still trigger -- there's no board card left to protect against,
+# only the remaining-players term matters at that point -- so it's
+# kept in the flow for consistency with esg/catchup_esg's every-street
+# shape rather than special-cased out.
+
+node_count: 5
+
+points:
+  - name: high
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+  - name: hand
+    score_type: HIGH
+    node_sets:
+      - []
+    showdown_type_override: HOLDEM
+
+showdown:
+  type: OMAHA
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 5, eligible: has_stack}
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+  - id: bet_preflop
+    type: betting
+    rules: {kind: pot_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+  - id: christmas_flop
+    type: deal_extra_hole_card
+    config: {mode: christmas, count: 1, eligible: active, remaining_board_cards: 2}
+    metadata: {street_index: -1, street_name: christmas}
+  - id: bet_flop
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: set_first_to_act_draw
+    type: set_first_to_act
+    config: {offset: 1}
+  - id: begin_draw_round
+    type: begin_decision_round
+  - id: discard_draw
+    type: card_select
+    decider: current_player
+    config:
+      min_count: 0
+      max_count: 5
+      replace_from_deck: true
+      eligible: active
+    metadata: {street_index: -1, street_name: draw}
+    transitions:
+      - to: discard_draw
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: deal_turn
+        when: always
+
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+  - id: christmas_turn
+    type: deal_extra_hole_card
+    config: {mode: christmas, count: 1, eligible: active, remaining_board_cards: 1}
+    metadata: {street_index: -1, street_name: christmas}
+  - id: bet_turn
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+  - id: christmas_river
+    type: deal_extra_hole_card
+    config: {mode: christmas, count: 1, eligible: active, remaining_board_cards: 0}
+    metadata: {street_index: -1, street_name: christmas}
+  - id: bet_river
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+
+  - id: showdown
+    type: showdown
+  - id: complete
+    type: noop
+    terminal: true

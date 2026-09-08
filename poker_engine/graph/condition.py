@@ -25,7 +25,7 @@ persisting on GameState itself.
 DECISION outcomes across the whole hand -- e.g. Grinch's "christmas next
 street?" answer) is expected to exist on whatever state object is passed
 in; it's added when GameState is extended for graph play (see
-graph_engine.py), not created here.
+graph_state.py), not created here.
 """
 
 from abc import ABC, abstractmethod
@@ -181,6 +181,13 @@ class ExtraValue(Accessor):
 
 PLAYER_ROLE_FIELDS = {
     "last_aggressor": "last_aggressor",
+    # Generic, cross-street "last aggressor" fallback chain -- see
+    # GraphGameState.persistent_last_aggressor's own docstring for why
+    # this is a distinct role from plain "last_aggressor" (which is
+    # reset every street by reset_betting_round() and goes None on a
+    # check-through street). Grinch is the first consumer; deliberately
+    # not named/scoped to Grinch specifically.
+    "persistent_last_aggressor": "persistent_last_aggressor",
     "dealer": "dealer_position",
     "current_player": "current_player",
 }

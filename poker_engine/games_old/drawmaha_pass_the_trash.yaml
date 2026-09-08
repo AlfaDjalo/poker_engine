@@ -1,0 +1,128 @@
+name: drawmaha_pass_the_trash
+layout_name: single_board
+payout_type: split_pot
+
+# Pass the Trash: after preflop betting, each active player passes
+# exactly 1 card (from their 5-card hand) to the player on their left,
+# simultaneously (see card_pass.py's own docstring on why apply()
+# defers the actual card movement). distribute_pass_trash applies
+# every recorded pass at once immediately after the round completes,
+# before the flop is dealt.
+#
+# This variant only passes preflop (the design note allows "just
+# pre-flop, or also post-flop" -- post-flop passing is a straightforward
+# copy of this same set_first_to_act/begin_decision_round/card_pass/
+# distribute_passes block inserted after a later street's betting, left
+# out here to keep this variant to the simplest documented shape).
+
+node_count: 5
+
+points:
+  - name: high
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+  - name: hand
+    score_type: HIGH
+    node_sets:
+      - []
+    showdown_type_override: HOLDEM
+
+showdown:
+  type: OMAHA
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 5, eligible: has_stack}
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+  - id: bet_preflop
+    type: betting
+    rules: {kind: pot_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+
+  - id: set_first_to_act_pass
+    type: set_first_to_act
+    config: {offset: 1}
+  - id: begin_pass_round
+    type: begin_decision_round
+  - id: pass_trash
+    type: card_pass
+    decider: current_player
+    config:
+      count: 1
+      target_rule: left
+      eligible: active
+    metadata: {street_index: -1, street_name: pass_trash}
+    transitions:
+      - to: pass_trash
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: distribute_pass_trash
+        when: always
+  - id: distribute_pass_trash
+    type: distribute_passes
+    config: {decision_node: pass_trash}
+
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+  - id: bet_flop
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: set_first_to_act_draw
+    type: set_first_to_act
+    config: {offset: 1}
+  - id: begin_draw_round
+    type: begin_decision_round
+  - id: discard_draw
+    type: card_select
+    decider: current_player
+    config:
+      min_count: 0
+      max_count: 5
+      replace_from_deck: true
+      eligible: active
+    metadata: {street_index: -1, street_name: draw}
+    transitions:
+      - to: discard_draw
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: deal_turn
+        when: always
+
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+  - id: bet_turn
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+  - id: bet_river
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+
+  - id: showdown
+    type: showdown
+  - id: complete
+    type: noop
+    terminal: true

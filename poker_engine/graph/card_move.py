@@ -20,6 +20,18 @@ physically represented (hand_mask bitmasks, node_cards slots, the
 discard_pile list, deck draw order). Every other module deals only in
 ZoneRef / CardMove and never touches players[i].hand_mask or
 state.node_cards directly.
+
+Discard-pile recycling
+-----------------------
+When a DECK draw (by `count`, i.e. "next N cards in shuffle order" --
+never an explicit-card_ids draw) needs more cards than remain in the
+deck, _ensure_deck_has() shuffles the discard pile back into the deck
+first, via Deck.reshuffle_remaining() (NOT Deck.shuffle(), which would
+wrongly reset to a full 52-card deck and resurrect cards currently live
+in hole cards / on the board). This makes every draw-heavy variant
+(Drawmaha, Throw Dem, ESG/Catchup ESG's own discard-pile-sourced
+redeals, ...) safe against exhausting the deck mid-hand without any of
+those mechanics needing to know reshuffling ever happened.
 """
 
 from dataclasses import dataclass
@@ -93,6 +105,7 @@ class CardMoveExecutor:
                 for c in move.card_ids:
                     deck.remove(c)
                 return move.card_ids
+            self._ensure_deck_has(move.count, state, deck)
             return tuple(deck.draw_next() for _ in range(move.count))
 
         if zone == CardZone.HAND:
@@ -115,6 +128,14 @@ class CardMoveExecutor:
             return (existing,)
 
         if zone == CardZone.DISCARD_PILE:
+            if state.discard_pile is None:
+                # Defensive: some state-construction path (snapshot
+                # restore, a custom builder) left this as None instead
+                # of []. Never let that crash a live hand -- repair it
+                # here, but this should also be fixed at its source
+                # (whatever GameState/GraphGameState/HandSnapshot
+                # constructor let it default to None).
+                state.discard_pile = []
             if move.card_ids is not None:
                 for c in move.card_ids:
                     state.discard_pile.remove(c)
@@ -124,6 +145,34 @@ class CardMoveExecutor:
             return taken
 
         raise ValueError(f"Unhandled source zone: {zone}")
+
+    def _ensure_deck_has(self, count: int, state, deck) -> None:
+        """
+        If the deck doesn't have enough cards left to satisfy an
+        upcoming `count`-card draw, shuffle the discard pile back into
+        the deck first. This is the ONLY place discards return to the
+        deck -- draw/discard-heavy variants can otherwise exhaust the
+        deck mid-hand.
+
+        Uses deck.reshuffle_remaining(), never deck.shuffle() -- see
+        module docstring.
+        """
+        if deck.remaining_count() >= count:
+            return
+
+        if state.discard_pile is None:
+            state.discard_pile = []
+
+        if not state.discard_pile:
+            raise RuntimeError(
+                f"Deck has {deck.remaining_count()} card(s) left, needs "
+                f"{count}, and the discard pile is empty -- cannot satisfy draw"
+            )
+
+        for c in state.discard_pile:
+            deck.return_card(c)
+        state.discard_pile = []
+        deck.reshuffle_remaining()
 
     # -----------------------------------------------------
     # Destination side: place cards into their new zone
@@ -146,6 +195,8 @@ class CardMoveExecutor:
             return
 
         if zone == CardZone.DISCARD_PILE:
+            if state.discard_pile is None:
+                state.discard_pile = []
             state.discard_pile.extend(card_ids)
             return
 

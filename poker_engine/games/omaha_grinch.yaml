@@ -1,0 +1,124 @@
+name: Omaha_grinch
+layout_name: single_board
+payout_type: points
+
+# Grinch: the player who took the LAST AGGRESSIVE ACTION decides (a
+# plain yes/no BOOLEAN decision) whether the NEXT street gets a
+# Christmas-style bonus card. One grinch_decision_* / christmas_* pair
+# per street transition (preflop->flop, flop->turn, turn->river), each
+# decision recorded under its own key (grinch_flop / grinch_turn /
+# grinch_river) so a later street's check only ever reads the decision
+# made for THAT street.
+#
+# decider: persistent_last_aggressor is resolved via
+# condition.resolve_decider -> state.persistent_last_aggressor, a
+# generic, CROSS-STREET aggressor tracker (see graph_state.py's
+# GraphGameState.persistent_last_aggressor docstring) -- deliberately
+# NOT plain "last_aggressor", which reset_betting_round() clears to
+# None at the start of every street. Using the plain per-street value
+# here was the original bug: a street that goes check-check-check...
+# (nobody ever bets/raises) leaves last_aggressor at None and
+# resolve_decider("last_aggressor", state) raises ValueError.
+#
+# persistent_last_aggressor never goes None past the start of a hand:
+# it's seeded by handle_post_blinds (posting the BB is the base
+# preflop fallback) or, for a hand with no blinds at all (a bomb pot),
+# by handle_post_antes (first player to post an ante) -- see
+# graph_engine.py -- and is only ever overwritten by a REAL BET/RAISE
+# (see decision_domains/betting.py's apply()), never reset by
+# reset_betting_round(). So a check-check-check street correctly falls
+# back through to whoever was last aggressive on an earlier street,
+# all the way back to the forced bets if nobody has ever bet or raised
+# at all this hand -- exactly the documented fallback chain.
+
+node_count: 5
+
+points:
+  - name: high
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+showdown:
+  type: OMAHA
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 5, eligible: has_stack}
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+  - id: bet_preflop
+    type: betting
+    rules: {kind: pot_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+
+  - id: grinch_decision_flop
+    type: boolean
+    decider: persistent_last_aggressor
+    config: {label: "christmas_next_street", record_key: grinch_flop}
+    metadata: {street_index: -1, street_name: grinch}
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+  - id: christmas_flop
+    type: deal_extra_hole_card
+    config: {mode: grinch_christmas, count: 1, eligible: active, grinch_decision_key: grinch_flop}
+    metadata: {street_index: -1, street_name: christmas}
+  - id: bet_flop
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: grinch_decision_turn
+    type: boolean
+    decider: persistent_last_aggressor
+    config: {label: "christmas_next_street", record_key: grinch_turn}
+    metadata: {street_index: -1, street_name: grinch}
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+  - id: christmas_turn
+    type: deal_extra_hole_card
+    config: {mode: grinch_christmas, count: 1, eligible: active, grinch_decision_key: grinch_turn}
+    metadata: {street_index: -1, street_name: christmas}
+  - id: bet_turn
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: grinch_decision_river
+    type: boolean
+    decider: persistent_last_aggressor
+    config: {label: "christmas_next_street", record_key: grinch_river}
+    metadata: {street_index: -1, street_name: grinch}
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+  - id: christmas_river
+    type: deal_extra_hole_card
+    config: {mode: grinch_christmas, count: 1, eligible: active, grinch_decision_key: grinch_river}
+    metadata: {street_index: -1, street_name: christmas}
+  - id: bet_river
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+
+  - id: showdown
+    type: showdown
+  - id: complete
+    type: noop
+    terminal: true

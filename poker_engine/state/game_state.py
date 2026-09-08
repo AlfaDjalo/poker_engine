@@ -82,20 +82,27 @@ class GameState:
         for i in range(1, n + 1):
             idx = (self.current_player + i) % n
             p = self.players[idx]
-            if not p.has_folded and not p.is_all_in:
+            if not p.has_folded and not p.is_all_in and not p.sitting_out:
                 self.current_player = idx
                 return
 
     def active_players(self):
+        # not folded, not all-in, and actually dealt into this hand
+        # (see PlayerState.sitting_out's own docstring for why this is
+        # a separate, persistent flag rather than removing the seat
+        # from self.players entirely).
         return [
             i for i, p in enumerate(self.players)
-            if not p.has_folded and not p.is_all_in
+            if not p.has_folded and not p.is_all_in and not p.sitting_out
         ]
 
     def remaining_players(self):
+        # not folded and actually dealt into this hand. A sitting-out
+        # seat was never dealt cards, so it can never be "still in the
+        # hand" regardless of has_folded's value.
         return [
             i for i, p in enumerate(self.players)
-            if not p.has_folded
+            if not p.has_folded and not p.sitting_out
         ]
 
     # -----------------------------------------------------
@@ -226,7 +233,7 @@ class GameState:
 
         remaining = [
             p for p in self.players
-            if not p.has_folded and not p.is_all_in
+            if not p.has_folded and not p.is_all_in and not p.sitting_out
         ]
 
         if not remaining:
@@ -281,17 +288,37 @@ class GameState:
         self.last_aggressor = None
         self.raises_this_street = 0
 
-        active = [
-            i for i, p in enumerate(self.players)
-            if not p.has_folded and not p.is_all_in
-        ]
+        active = self.active_players()
 
         if not active:
             self.last_to_act = None
             return
-        
+
+        # current_player may be the player who JUST folded to close out
+        # the previous street's betting (their fold was the action that
+        # made betting_round_complete() true) -- they're no longer in
+        # `active`, so a plain active.index(current_player) would raise
+        # ValueError. Walk forward seat-by-seat from current_player to
+        # the next ACTUALLY-active seat instead of assuming
+        # current_player is still a member of `active` -- with nobody
+        # folded/all-in this reduces to exactly the old
+        # active.index(current_player) behaviour, so no other caller's
+        # behaviour changes.
+        n = len(self.players)
         start = self.current_player
-        idx = active.index(start)
+        idx = None
+        for offset in range(n):
+            candidate = (start + offset) % n
+            if candidate in active:
+                idx = active.index(candidate)
+                break
+
+        # Unreachable: `active` is non-empty (checked above), so some
+        # seat in range(n) must be in it -- idx is always set by the
+        # loop. Guarded anyway rather than trusting that invariant
+        # silently.
+        if idx is None:
+            idx = 0
 
         self.last_to_act = active[idx - 1]
 

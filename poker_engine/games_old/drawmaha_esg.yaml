@@ -1,0 +1,122 @@
+name: drawmaha_esg
+layout_name: single_board
+payout_type: split_pot
+
+# Drawmaha + ESG: identical to drawmaha.yaml's flow, with one
+# deal_extra_hole_card (mode: esg) check inserted immediately before
+# each post-flop betting round (flop/turn/river). Each check is
+# re-evaluated fresh against the CURRENT discard pile size vs. current
+# remaining-player count at the moment it runs -- no state carried
+# between checks (that's catchup_esg, see drawmaha_catchup_esg.yaml).
+#
+# Preflop has no ESG check: the discard pile is necessarily near-empty
+# before any folds/discards have happened, so a preflop check would
+# (almost) never trigger and isn't part of the CAP ESG spec anyway.
+#
+# NOTE: the "cards that will be undealt after the river are added to
+# the discard pile to increase ESG likelihood" behaviour described in
+# the design note is NOT implemented -- extra_cards.py's own docstring
+# flags this as a placeholder. discard_pile only grows via ordinary
+# FOLD/CARD_SELECT moves for now.
+
+node_count: 5
+
+points:
+  - name: high
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+  - name: hand
+    score_type: HIGH
+    node_sets:
+      - []
+    showdown_type_override: HOLDEM
+
+showdown:
+  type: OMAHA
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 5, eligible: has_stack}
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+  - id: bet_preflop
+    type: betting
+    rules: {kind: pot_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+  - id: esg_flop
+    type: deal_extra_hole_card
+    config: {mode: esg, count: 1, eligible: active}
+    metadata: {street_index: -1, street_name: esg}
+  - id: bet_flop
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: set_first_to_act_draw
+    type: set_first_to_act
+    config: {offset: 1}
+  - id: begin_draw_round
+    type: begin_decision_round
+  - id: discard_draw
+    type: card_select
+    decider: current_player
+    config:
+      min_count: 0
+      max_count: 5
+      replace_from_deck: true
+      eligible: active
+    metadata: {street_index: -1, street_name: draw}
+    transitions:
+      - to: discard_draw
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: deal_turn
+        when: always
+
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+  - id: esg_turn
+    type: deal_extra_hole_card
+    config: {mode: esg, count: 1, eligible: active}
+    metadata: {street_index: -1, street_name: esg}
+  - id: bet_turn
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+  - id: esg_river
+    type: deal_extra_hole_card
+    config: {mode: esg, count: 1, eligible: active}
+    metadata: {street_index: -1, street_name: esg}
+  - id: bet_river
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+
+  - id: showdown
+    type: showdown
+  - id: complete
+    type: noop
+    terminal: true

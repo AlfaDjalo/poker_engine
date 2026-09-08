@@ -35,6 +35,29 @@ from poker_engine.graph.graph_state import GraphGameState
 from poker_engine.state.player_state import PlayerState
 
 
+def _next_eligible_dealer_position(state: GraphGameState) -> int:
+    """
+    Advance the dealer button to the next seat NOT sitting out this
+    hand (see PlayerState.sitting_out). A plain (dealer_position + 1)
+    % n would happily park the button on a sitting-out seat, which
+    then throws off every downstream "offset from the dealer" (SB/BB
+    via graph_engine.handle_post_blinds's own sitting-out-aware walk,
+    preflop first-to-act, etc.) by one seat versus what a human table
+    would do.
+
+    Raises ValueError if every seat is sitting out -- a hand can't
+    start at all in that case, and that's a table-composition bug the
+    caller needs to see, not something to silently paper over.
+    """
+    n = len(state.players)
+    idx = state.dealer_position
+    for _ in range(n):
+        idx = (idx + 1) % n
+        if not state.players[idx].sitting_out:
+            return idx
+    raise ValueError("Every seat is sitting_out -- cannot advance the dealer button")
+
+
 def start_new_hand(
     engine: GraphEngine,
     game_def,
@@ -78,7 +101,7 @@ def start_new_hand(
     )
 
     if advance_dealer:
-        state.dealer_position = (state.dealer_position + 1) % len(state.players)
+        state.dealer_position = _next_eligible_dealer_position(state)
 
     state.pot = 0
     state.node_cards = [None] * game_def.node_count

@@ -1,0 +1,91 @@
+name: omaha_catchup_esg
+layout_name: single_board
+payout_type: points
+
+# Identical to Omaha_esg.yaml except mode: catchup_esg instead of
+# esg on each check. extra_cards.py's catchup_esg mode ORs the live
+# "discards >= remaining players" condition with a
+# state.decisions["catchup_esg_pending"] flag it set itself the
+# previous time it ran and missed -- so a miss on the flop check gets
+# "caught up" on the very next check (turn), and a miss there is
+# caught up on the river check. This models "catch up on the FIRST
+# future street with sufficient discards" correctly for the
+# single-miss case; it does not accumulate multiple simultaneous
+# misses into a counted backlog (see extra_cards.py's own docstring).
+
+node_count: 5
+
+points:
+  - name: high
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+showdown:
+  type: OMAHA
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 5, eligible: has_stack}
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+  - id: bet_preflop
+    type: betting
+    rules: {kind: pot_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-flop}
+
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+  - id: esg_flop
+    type: deal_extra_hole_card
+    config: {mode: catchup_esg, count: 1, eligible: active}
+    metadata: {street_index: -1, street_name: esg}
+  - id: bet_flop
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+  - id: esg_turn
+    type: deal_extra_hole_card
+    config: {mode: catchup_esg, count: 1, eligible: active}
+    metadata: {street_index: -1, street_name: esg}
+  - id: bet_turn
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+  - id: esg_river
+    type: deal_extra_hole_card
+    config: {mode: catchup_esg, count: 1, eligible: active}
+    metadata: {street_index: -1, street_name: esg}
+  - id: bet_river
+    type: betting
+    rules: {kind: pot_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+
+  - id: showdown
+    type: showdown
+  - id: complete
+    type: noop
+    terminal: true

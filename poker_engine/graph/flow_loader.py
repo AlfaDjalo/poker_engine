@@ -79,6 +79,7 @@ AWARD_LAST_PLAYER_ID = "award_last_player"
 _STANDARD_AUTO_TYPES = {
     "noop",
     "deal_hole_cards",
+    "deal_extra_hole_card",
     "post_blinds",
     "post_antes",
     "reset_betting_round",

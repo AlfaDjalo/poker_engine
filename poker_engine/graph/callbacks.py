@@ -39,6 +39,24 @@ Differences from the old EngineCallbacks shape, and why:
     a callback read engine.last_winners without recomputing it.
   - on_hand_start(state) becomes on_hand_start(engine): call
     start_hand() (below) in place of engine.start() directly.
+  - on_cards_distributed(engine, distributions) is NEW -- fires exactly
+    once, right after a CARD_PASS round's distribute_passes AUTO node
+    has applied every player's pass simultaneously (see
+    decision_domains/card_pass.py). `distributions` is
+    engine.last_distributed_passes: a list of
+    {"player", "card_ids", "target"} dicts, one per completed pass.
+    This is the only point at which a consumer should reveal received
+    cards for a pass-the-trash (or any future CARD_PASS) round --
+    nothing before this should show a player holding cards they
+    haven't actually been dealt yet, regardless of what order the
+    Frontend processed each player's *selection* in (see
+    CAP_Technical_Quick_Reference.md §3.4: "The Frontend must not
+    expect received cards to appear during the decision round").
+
+If engine.start()/engine.submit_decision() raise GraphEngineStepError
+(see graph_engine.py), that exception propagates straight out of
+start_hand()/submit_decision() below WITHOUT firing any callback --
+correct, since a rolled-back call means nothing actually happened.
 """
 
 from typing import Optional
@@ -52,13 +70,24 @@ class GraphEngineCallbacks:
     Override whichever hooks a caller needs; every method defaults to a
     no-op, matching engine_callbacks.EngineCallbacks's own shape (a
     plain base class with pass-bodied methods, not an ABC -- a caller
-    overriding only on_showdown shouldn't have to stub the other two).
+    overriding only on_showdown shouldn't have to stub the other ones).
     """
 
     def on_hand_start(self, engine: GraphEngine) -> None:
         pass
 
     def on_decision(self, engine: GraphEngine, response: DecisionResponse) -> None:
+        pass
+
+    def on_cards_distributed(self, engine: GraphEngine, distributions) -> None:
+        """
+        Fires exactly once, right after a CARD_PASS round that just
+        completed has had its distribute_passes AUTO node run --
+        `distributions` is the list execute_pending_passes() returned:
+        [{"player": int, "card_ids": Tuple[int, ...], "target": int}, ...].
+        See module docstring for why this is the right/only moment to
+        reveal received cards.
+        """
         pass
 
     def on_showdown(self, engine: GraphEngine, result) -> None:
@@ -76,17 +105,20 @@ def start_hand(engine: GraphEngine, callbacks: Optional[GraphEngineCallbacks] = 
     requested (see poker_state.py: on_hand_start fires as the very last
     step of start_hand(), after phase is already set to BETTING).
 
-    Also fires on_showdown if the hand reaches showdown with ZERO
-    decisions -- e.g. every remaining player is already all-in the
-    moment the very first betting round is entered (see
+    Also fires on_cards_distributed/on_showdown if either already
+    happened by the time the graph first pauses -- e.g. a hand whose
+    very first street is a simultaneous pass-the-trash round with zero
+    real decisions before it resolves, or every remaining player
+    already all-in the moment the first betting round is entered (see
     standard_graph.py's ActivePlayersCount() == 0 branch, which skips
-    straight past a BETTING node with nothing legal to do). In that
-    case showdown happens inside this very call, and nothing else will
-    ever get a chance to fire it.
+    straight past a BETTING node with nothing legal to do). In either
+    case the event happens inside this very call, and nothing else
+    will ever get a chance to fire it.
     """
     engine.start()
     if callbacks:
         callbacks.on_hand_start(engine)
+        _maybe_fire_distribution(engine, callbacks)
         _maybe_fire_showdown(engine, callbacks)
 
 
@@ -97,13 +129,20 @@ def submit_decision(
 ) -> None:
     """
     Call in place of engine.submit_decision(response) directly when
-    callbacks matter. Fires on_decision, then on_showdown if this
-    decision was the one that completed the hand.
+    callbacks matter. Fires on_decision, then on_cards_distributed if
+    this decision's round just resolved a CARD_PASS distribution, then
+    on_showdown if this decision was the one that completed the hand.
     """
     engine.submit_decision(response)
     if callbacks:
         callbacks.on_decision(engine, response)
+        _maybe_fire_distribution(engine, callbacks)
         _maybe_fire_showdown(engine, callbacks)
+
+
+def _maybe_fire_distribution(engine: GraphEngine, callbacks: GraphEngineCallbacks) -> None:
+    if engine.last_distributed_passes is not None:
+        callbacks.on_cards_distributed(engine, engine.last_distributed_passes)
 
 
 def _maybe_fire_showdown(engine: GraphEngine, callbacks: GraphEngineCallbacks) -> None:
