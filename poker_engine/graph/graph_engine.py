@@ -155,7 +155,23 @@ def _all_slots(cls) -> List[str]:
 
 class GraphEngine:
 
-    def __init__(self, graph: GameGraph, state: GraphGameState, deck, showdown_resolver=None):
+    def __init__(
+        self,
+        graph: GameGraph,
+        state: GraphGameState,
+        deck,
+        showdown_resolver=None,
+        transactional: bool = True,
+    ):
+        # transactional=True (default, used by the UI/Backend): every
+        # start()/submit_decision() deep-copies state+deck first so a
+        # failure rolls the engine back and the call can be retried.
+        # transactional=False (RL training): skips those two deepcopies per
+        # call -- profiling showed them dominating engine time. A failing
+        # step then raises GraphEngineStepError WITHOUT rollback, leaving
+        # the engine in an undefined partial state: only safe when a
+        # failure means the episode is simply abandoned.
+        self.transactional = transactional
         self.graph = graph
         self.state = state
         self.deck = deck
@@ -203,12 +219,13 @@ class GraphEngine:
         Rolls back and raises GraphEngineStepError if anything fails
         partway through -- see module docstring."""
         self.last_distributed_passes = None
-        checkpoint = self._checkpoint()
+        checkpoint = self._checkpoint() if self.transactional else None
         try:
             self.state.current_node = self.graph.entry_node
             self._run()
         except Exception as exc:
-            self._restore(checkpoint)
+            if checkpoint is not None:
+                self._restore(checkpoint)
             raise GraphEngineStepError(
                 f"start() failed while running the graph forward from "
                 f"{self.graph.entry_node!r}: {exc!r}. Engine has been "
@@ -236,7 +253,7 @@ class GraphEngine:
                 f"pending request {self._pending_request.node_id!r}"
             )
 
-        checkpoint = self._checkpoint()
+        checkpoint = self._checkpoint() if self.transactional else None
         node = self.graph.node(self.state.current_node)
 
         try:
@@ -248,7 +265,8 @@ class GraphEngine:
             self._advance_transition(node.id)
             self._run()
         except Exception as exc:
-            self._restore(checkpoint)
+            if checkpoint is not None:
+                self._restore(checkpoint)
             raise GraphEngineStepError(
                 f"submit_decision() failed while advancing from node "
                 f"{node.id!r}: {exc!r}. Engine has been rolled back to "
@@ -256,6 +274,28 @@ class GraphEngine:
                 f"again and this decision (or a different one) may be "
                 f"retried."
             ) from exc
+
+    def refresh_pending_request(self) -> None:
+        """
+        Rebuild pending_request for the DECISION node the engine is
+        currently sitting at, from the CURRENT state.
+
+        For callers that deliberately modify state AFTER the engine has
+        arrived at a decision node (RL scenario setup overriding pot and
+        stacks), so the request's option amounts (min/max bet, call
+        amount) reflect the modified state. Raises GraphEngineError if the
+        engine is not currently at a DECISION node.
+        """
+        node_id = self.state.current_node
+        if node_id is None or self.graph.is_terminal(node_id):
+            raise GraphEngineError("refresh_pending_request(): no current decision node")
+        node = self.graph.node(node_id)
+        if node.kind != NodeKind.DECISION:
+            raise GraphEngineError(
+                f"refresh_pending_request(): current node {node_id!r} is not a DECISION node"
+            )
+        resolver = get_resolver(node.domain)
+        self._pending_request = resolver.build_request(node, self.state, self.deck)
 
     # -----------------------------------------------------
     # Checkpoint / restore -- see GraphEngineStepError's docstring

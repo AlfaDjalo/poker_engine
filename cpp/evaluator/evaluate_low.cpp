@@ -142,8 +142,9 @@ uint64_t evaluate_low_a5(uint64_t hole_mask, uint64_t board_mask, int showdown_t
     return best;
 }
 
-// LOW_27: Ace=high, straights/flushes count against you.
-// We reuse rank_high_5 — a lower high-hand score = better low hand.
+// LOW_27: Ace=high, straights/flushes count against you; A-2-3-4-5 is NOT a
+// straight. We reuse rank_high_5(mask, false) — a lower high-hand score =
+// better low hand.
 // Caller uses min() to find winner.
 uint64_t evaluate_low_27(uint64_t hole_mask, uint64_t board_mask, int showdown_type, uint64_t& best_mask_out) {
     std::vector<int> hole, board;
@@ -158,7 +159,9 @@ uint64_t evaluate_low_27(uint64_t hole_mask, uint64_t board_mask, int showdown_t
     for (auto& cards : combos) {
         uint64_t combo_mask = 0;
         for (int c : cards) combo_mask |= (1ULL << c);
-        int score = rank_high_5(combo_mask);
+        // Deuce-to-seven: the ace is always HIGH, so A-2-3-4-5 is NOT a
+        // straight (ace_low_straight = false).
+        int score = rank_high_5(combo_mask, false);
         if (score <= 0) continue;
         // Lower rank_high_5 score = better 2-7 low hand
         if (best == 0 || score < best) {

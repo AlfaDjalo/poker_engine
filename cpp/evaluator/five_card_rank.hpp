@@ -13,7 +13,18 @@ inline int suit_of(int card)
     return card / 13;
 }
 
-inline int rank_high_5(uint64_t mask)
+// ace_low_straight:
+//   true  (default) -> A-2-3-4-5 ("wheel") is a straight and the LOWEST
+//                      one (five-high), strictly below 2-3-4-5-6.
+//   false           -> A-2-3-4-5 is NOT a straight (ace is always high).
+//                      Required for deuce-to-seven (LOW_27) lowball.
+//
+// FIX: previously the wheel's ranks were rewritten to {0,1,2,3,4}, which is
+// exactly 2-3-4-5-6 (six-high), so a wheel TIED a six-high straight (and a
+// wheel straight flush tied a six-high straight flush). The wheel is now
+// flagged and scored 0 within its category, below every other straight
+// (the next-lowest, six-high, scores 121186).
+inline int rank_high_5(uint64_t mask, bool ace_low_straight = true)
 {
     std::array<int, 5> cards_arr;
     int idx = 0;
@@ -38,10 +49,11 @@ inline int rank_high_5(uint64_t mask)
                     ranks[2] == ranks[0] + 2 &&
                     ranks[3] == ranks[0] + 3);
 
-    if (!straight && ranks[0] == 0 && ranks[1] == 1 &&
+    bool wheel = false;
+    if (ace_low_straight && !straight && ranks[0] == 0 && ranks[1] == 1 &&
         ranks[2] == 2 && ranks[3] == 3 && ranks[4] == 12) {
             straight = true;
-            ranks = {0, 1, 2, 3, 4};
+            wheel = true;
     }
 
     std::array<int, 13> freq{};
@@ -57,6 +69,10 @@ inline int rank_high_5(uint64_t mask)
 
     for (int r: sorted_by_freq)
         score = score * 13 + r;
+
+    // Wheel: lowest straight / straight flush, below six-high (score 121186).
+    if (wheel)
+        score = 0;
 
     int maxf = *std::max_element(freq.begin(), freq.end());
     int pairs = 0;

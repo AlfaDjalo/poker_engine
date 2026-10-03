@@ -18,6 +18,7 @@ ext_modules = [
             'evaluator/evaluate_draw.cpp',
             'evaluator/stub_evaluators.cpp',
             'evaluator/evaluate_low.cpp',
+            'evaluator/equity_mc.cpp'
         ],
         include_dirs=[get_pybind_include(), 'evaluator'],
         language='c++',

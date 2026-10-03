@@ -61,6 +61,7 @@ pybind11_add_module(
     cpp/evaluator/evaluate_draw.cpp
     cpp/evaluator/stub_evaluators.cpp
     cpp/evaluator/evaluate_low.cpp
+    cpp/evaluator/equity_mc.cpp
 )
 
 

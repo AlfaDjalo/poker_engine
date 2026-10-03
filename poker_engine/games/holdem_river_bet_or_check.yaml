@@ -1,0 +1,65 @@
+name: holdem_river_bet_or_check
+layout_name: single_board
+payout_type: points
+
+# Heads-up river-only decision: board is fully dealt with no betting
+# until the river. A 50/50 ante preloads the pot to 100 while leaving
+# each player exactly 100 behind — SPR = 1, so a pot-sized bet is
+# already an all-in shove and the facing player structurally cannot
+# raise (no chips left behind them). That's what makes "bet-or-check,
+# then call-or-fold, no re-raises" hold without needing a raise cap:
+# there is simply nothing left to raise WITH once either player bets.
+
+node_count: 5
+
+points:
+  - name: main
+    score_type: HIGH
+    node_sets:
+      - [0, 1, 2, 3, 4]
+
+showdown:
+  type: HOLDEM
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 2, eligible: has_stack}
+
+  - id: post_antes
+    type: post_antes
+    config: {ante: 50}
+
+  - id: deal_flop
+    type: deal
+    board_nodes: [0, 1, 2]
+    metadata: {street_index: 1, street_name: flop}
+
+  - id: deal_turn
+    type: deal
+    board_nodes: [3]
+    metadata: {street_index: 2, street_name: turn}
+
+  - id: deal_river
+    type: deal
+    board_nodes: [4]
+    metadata: {street_index: 3, street_name: river}
+
+  - id: bet_river
+    type: betting
+    rules: {kind: no_limit}
+    reset: false
+    first_to_act_offset: 1
+    metadata: {street_index: 3, street_name: river}
+
+  - id: showdown
+    type: showdown
+
+  - id: complete
+    type: noop
+    terminal: true
