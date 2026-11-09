@@ -1,0 +1,87 @@
+name: single_draw_27
+layout_name: single_board
+payout_type: points
+
+# 2-7 Single Draw (Deuce-to-Seven Lowball, one draw).
+#
+# Rules: 5 hole cards, blinds, pre-draw betting, ONE draw (discard 0-5,
+# replaced from the deck), post-draw betting, showdown. Lowest hand wins:
+# aces are HIGH, straights and flushes count against you, so the nuts is
+# 7-5-4-3-2 unsuited. No board cards at all.
+#
+# Scoring: LOW_27 with ShowdownType DRAW (5 hole cards, no board).
+# low_qualifier is explicitly null -- the loader defaults it to 8, which is
+# an A-5 "eight or better" qualifier and must NOT apply to 2-7 (every
+# hand qualifies).
+#
+# Structure mirrors drawmaha.yaml's draw round (set_first_to_act ->
+# begin_decision_round -> card_select self-loop on round_complete).
+# Draw metadata uses street_index -1 (non-street sentinel).
+
+node_count: 0
+low_qualifier: null
+
+points:
+  - name: low
+    score_type: LOW_27
+    node_sets:
+      - []
+
+showdown:
+  type: DRAW
+
+award_last_player_next: complete
+
+flow:
+  - id: setup
+    type: noop
+
+  - id: deal_hole
+    type: deal_hole_cards
+    config: {count: 5, eligible: has_stack}
+
+  - id: post_blinds
+    type: post_blinds
+    config: {small_blind: 1, big_blind: 2}
+
+  - id: bet_predraw
+    type: betting
+    rules: {kind: no_limit}
+    reset: false
+    first_to_act_offset: 3
+    metadata: {street_index: 0, street_name: pre-draw}
+
+  - id: set_first_to_act_draw
+    type: set_first_to_act
+    config: {offset: 1}
+
+  - id: begin_draw_round
+    type: begin_decision_round
+
+  - id: draw
+    type: card_select
+    decider: current_player
+    config:
+      min_count: 0
+      max_count: 5
+      replace_from_deck: true
+      eligible: active
+    metadata: {street_index: -1, street_name: draw}
+    transitions:
+      - to: draw
+        when: {not: {round_complete: {accessor: "active_players"}}}
+      - to: bet_postdraw
+        when: always
+
+  - id: bet_postdraw
+    type: betting
+    rules: {kind: no_limit}
+    first_to_act_offset: 1
+    metadata: {street_index: 1, street_name: post-draw}
+
+  - id: showdown
+    type: showdown
+
+  - id: complete
+    type: noop
+    terminal: true
