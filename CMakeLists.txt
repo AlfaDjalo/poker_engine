@@ -38,7 +38,6 @@ else()
 
     add_compile_options(
         -O3
-        -march=native
         -Wall
     )
 
